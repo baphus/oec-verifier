@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 type Errors = Record<string, string>;
 const required = ["email", "lastName", "firstName", "gender", "category", "philippineAddress", "province", "region", "position", "jobsite", "contactNumber", "oecNumber", "departureDate", "employer"];
@@ -45,11 +46,22 @@ export default function ApplicationForm() {
     setErrors(next); setFormError("");
     if (Object.keys(next).length || !requestId) { if (!requestId) setFormError("Please wait a moment and try again."); return; }
     startTransition(async () => {
-      const result = await submitPublicApplication(data);
-      if ("referenceNumber" in result && result.referenceNumber) {
-        setRequestId(newRequestId());
-        router.push(result.emailWarning ? "/apply/success?emailWarning=1" : "/apply/success");
-      } else { setFormError(result.error || "We could not submit your application. Please try again."); setErrors(result.fieldErrors || {}); }
+      const toastId = "public-application-submit";
+      toast.loading("Submitting your application…", { id: toastId });
+      try {
+        const result = await submitPublicApplication(data);
+        if ("referenceNumber" in result && result.referenceNumber) {
+          toast.dismiss(toastId);
+          setRequestId(newRequestId());
+          router.push(result.emailWarning ? "/apply/success?emailWarning=1" : "/apply/success");
+        } else {
+          toast.error("We could not submit your application.", { id: toastId });
+          setFormError(result.error || "We could not submit your application. Please try again."); setErrors(result.fieldErrors || {});
+        }
+      } catch {
+        toast.error("We could not submit your application. Please try again.", { id: toastId });
+        setFormError("We could not submit your application. Please try again.");
+      }
     });
   }
 
