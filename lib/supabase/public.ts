@@ -1,3 +1,3 @@
 import { createBrowserClient } from "@supabase/ssr";
-import { env } from "../env";
-export function createPublicClient() { const e = env(); return createBrowserClient(e.NEXT_PUBLIC_SUPABASE_URL, e.NEXT_PUBLIC_SUPABASE_ANON_KEY); }
+import { env, supabasePublicKey } from "../env";
+export function createPublicClient() { const e = env(); return createBrowserClient(e.NEXT_PUBLIC_SUPABASE_URL, supabasePublicKey(e)); }

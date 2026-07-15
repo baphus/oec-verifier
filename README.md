@@ -21,7 +21,8 @@ Copy `.env.example` to `.env.local`, then set these variables. This is the compl
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+# Legacy fallback: NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 GMAIL_USER
 GMAIL_APP_PASSWORD
@@ -34,7 +35,7 @@ RATE_LIMIT_WINDOW_MINUTES
 EMAIL_DELIVERY_LEASE_SECONDS
 ```
 
-`APP_URL` must be the URL users can reach. `RECEIPT_VALIDITY_HOURS`, `RATE_LIMIT_MAX_ATTEMPTS`, `RATE_LIMIT_WINDOW_MINUTES`, and `EMAIL_DELIVERY_LEASE_SECONDS` must be positive integers; their application defaults are 24, 5, 15, and 900 seconds respectively. The lease must be long enough for normal Gmail SMTP delivery. `RECEIPT_TOKEN_ENCRYPTION_KEY` is mandatory and must decode from Base64 to exactly 32 bytes. `RATE_LIMIT_HASH_SECRET` is mandatory and must be at least 16 characters.
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is preferred. Existing deployments may use `NEXT_PUBLIC_SUPABASE_ANON_KEY` as a fallback; at least one must be set. `APP_URL` must be the URL users can reach. `RECEIPT_VALIDITY_HOURS`, `RATE_LIMIT_MAX_ATTEMPTS`, `RATE_LIMIT_WINDOW_MINUTES`, and `EMAIL_DELIVERY_LEASE_SECONDS` must be positive integers; their application defaults are 24, 5, 15, and 900 seconds respectively. The lease must be long enough for normal Gmail SMTP delivery. `RECEIPT_TOKEN_ENCRYPTION_KEY` is mandatory and must decode from Base64 to exactly 32 bytes. `RATE_LIMIT_HASH_SECRET` is mandatory and must be at least 16 characters.
 
 Generate secrets with a local Node.js installation; use separate outputs and keep them in server-side secret storage:
 
