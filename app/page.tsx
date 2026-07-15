@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { PublicHeader, PublicFooter } from "@/components/public/Shell";
 
 export default function Home() {
@@ -8,10 +9,9 @@ export default function Home() {
       <main>
         <section className="hero-shell">
           <div className="hero-copy">
-            <p className="eyebrow">A DMW online service · secure intake</p>
             <h1>Make your airport application with confidence.</h1>
             <p className="hero-lede">
-              Submit your application for airport access in a few clear steps. You’ll receive a reference number to keep for your records and use when checking your receipt.
+              Submit your application for airport access in a few clear steps. You&apos;ll receive a reference number to keep for your records and use when checking your receipt.
             </p>
             <div className="hero-actions">
               <Link className="button button-primary" href="/apply">Start an application <span aria-hidden="true">→</span></Link>
@@ -25,7 +25,8 @@ export default function Home() {
             <p>Keep your reference number handy. It is the fastest way to check your receipt and application status.</p>
           </div>
         </section>
-        <section className="service-intro"><div><p className="eyebrow">What this service does</p><h2>One clear path from application to review.</h2></div><p>OEC Verify helps applicants submit required information securely for review. Take your time, use accurate details, and save your reference number when you finish.</p></section>
+
+        <section className="service-intro"><div><h2>One clear path from application to review.</h2></div><p>OEC Verify helps applicants submit required information securely for review. Take your time, use accurate details, and save your reference number when you finish.</p></section>
         <section className="trust-strip" aria-label="What to expect">
           <div><strong>01</strong><span>Complete the form</span></div>
           <div><strong>02</strong><span>Receive your reference</span></div>
@@ -33,6 +34,17 @@ export default function Home() {
         </section>
       </main>
       <PublicFooter />
+      <section className="hero-visual" aria-hidden="true">
+        <Image
+          src="/footer.jpg"
+          alt=""
+          width={1200}
+          height={400}
+          priority
+          className="w-full object-cover"
+          style={{ maxHeight: "360px" }}
+        />
+      </section>
     </div>
   );
 }

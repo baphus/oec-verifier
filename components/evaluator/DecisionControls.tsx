@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, XCircle, RotateCcw, Send } from "lucide-react";
+import { StatusHelp } from "@/components/evaluator/StatusHelp";
 
 type Action = "verify" | "reject" | "revoke";
 
@@ -48,6 +49,46 @@ export default function DecisionControls({
       : confirming === "reject"
       ? "Reject"
       : "Revoke receipt";
+
+  // Keyboard shortcuts: V (verify), R (reject), Esc (cancel)
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      // Don't fire when typing in inputs
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      if (e.key === "Escape" && confirming) {
+        e.preventDefault();
+        setConfirming(null);
+        return;
+      }
+
+      if (currentStatus !== "pending") return;
+
+      if (e.key === "v" || e.key === "V") {
+        e.preventDefault();
+        if (!pending) setConfirming("verify");
+        return;
+      }
+
+      if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        if (!pending && reason.trim()) {
+          setConfirming("reject");
+        } else if (!pending) {
+          // Focus the reason textarea so the user can type
+          document.getElementById("decision-reason")?.focus();
+        }
+        return;
+      }
+    },
+    [confirming, currentStatus, pending, reason]
+  );
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   const run = () => {
     if (!confirming) return;
@@ -128,17 +169,20 @@ export default function DecisionControls({
     <div className="bg-card border border-border rounded-lg overflow-hidden">
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
         <h2 ref={headingRef} tabIndex={-1} className="text-sm font-semibold text-foreground outline-none">Decision</h2>
-        <Badge
-          variant={
-            currentStatus === "verified"
-              ? "default"
-              : currentStatus === "pending"
-              ? "secondary"
-              : "destructive"
-          }
-        >
-          {currentStatus}
-        </Badge>
+        <span className="inline-flex items-center gap-1.5">
+          <Badge
+            variant={
+              currentStatus === "verified"
+                ? "default"
+                : currentStatus === "pending"
+                ? "secondary"
+                : "destructive"
+            }
+          >
+            {currentStatus}
+          </Badge>
+          <StatusHelp status={currentStatus} />
+        </span>
       </div>
 
       <div className="p-5 space-y-4">
@@ -183,6 +227,9 @@ export default function DecisionControls({
                 Reject
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Press <span className="font-semibold text-foreground">V</span> to verify · <span className="font-semibold text-foreground">R</span> to reject
+            </p>
           </>
         )}
 

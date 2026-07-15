@@ -16,12 +16,10 @@ export type SubmissionInput = z.infer<typeof submissionSchema>;
 export const PRIVACY_CONSENT_VERSION = "oec-privacy-v1" as const;
 export const requestIdSchema = z.string().uuid();
 export const publicApplicationSchema = z.object({
-  firstName: text(80), middleName: z.string().trim().max(80).optional().default(""), lastName: text(80), suffix: z.string().trim().max(30).optional().default(""),
+  firstName: text(80), middleName: text(80), lastName: text(80), suffix: z.string().trim().max(30).optional().default(""),
   fullName: z.string().trim().max(150).optional(), email: z.string().trim().email().max(254), oecNumber: text(50).regex(/^[A-Za-z0-9][A-Za-z0-9\- /]{2,49}$/),
   gender: text(40), category: text(100), philippineAddress: text(300), province: text(100), region: text(100),
-  employer: text(200), position: text(150), jobsite: text(200), contactNumber: text(40), departureDate: z.coerce.date(),
-  airport: z.string().trim().max(200).optional(), role: z.string().trim().max(100).optional(), phone: z.string().trim().max(40).optional(), details: z.string().trim().max(2000).optional(),
-  requestId: requestIdSchema, consent: z.literal(PRIVACY_CONSENT_VERSION),
+  position: text(150), jobsite: text(200), contactNumber: text(40), requestId: requestIdSchema, consent: z.literal(PRIVACY_CONSENT_VERSION),
 });
 export type PublicApplicationInput = z.infer<typeof publicApplicationSchema>;
 

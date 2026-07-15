@@ -4,6 +4,8 @@ import { requireActiveEvaluator } from "@/lib/auth";
 import { getSubmission, getPendingQueue, getDecisionAuthors } from "@/lib/actions/evaluator";
 import { recordSubmissionView } from "@/app/evaluator/actions";
 import DecisionControls from "@/components/evaluator/DecisionControls";
+import { NextPendingShortcut } from "@/components/evaluator/NextPendingShortcut";
+import { StatusHelp } from "@/components/evaluator/StatusHelp";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
@@ -78,6 +80,7 @@ export default async function SubmissionReview({
 
   return (
     <div className="evaluator-page">
+      <NextPendingShortcut nextPendingId={nextPending?.id ?? null} />
       {/* Back navigation + header */}
       <div className="mb-6">
         <Link
@@ -103,9 +106,12 @@ export default async function SubmissionReview({
               Submitted {date(submission.created_at)}
             </p>
           </div>
-          <Badge variant={statusColor} className="text-sm px-3 py-1">
-            {submission.status}
-          </Badge>
+          <span className="inline-flex items-center gap-1.5">
+            <Badge variant={statusColor} className="text-sm px-3 py-1">
+              {submission.status}
+            </Badge>
+            <StatusHelp status={submission.status} />
+          </span>
         </div>
       </div>
 
@@ -113,7 +119,7 @@ export default async function SubmissionReview({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Application details (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Personal Information */}
+          {/* Personal Information — includes address & contact */}
           <section className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="px-5 py-4 border-b border-border flex items-center gap-2">
               <User className="h-4 w-4 text-muted-foreground" />
@@ -155,23 +161,9 @@ export default async function SubmissionReview({
                     {submission.category}
                   </dd>
                 </div>
-              </dl>
-            </div>
-          </section>
-
-          {/* Location / Address */}
-          <section className="bg-card border border-border rounded-lg overflow-hidden">
-            <div className="px-5 py-4 border-b border-border flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold text-foreground">
-                Address & Contact
-              </h2>
-            </div>
-            <div className="p-5">
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                 <div className="sm:col-span-2">
-                  <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Philippine address
+                  <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> Philippine address
                   </dt>
                   <dd className="mt-1 text-sm text-foreground">
                     {submission.philippine_address}
@@ -205,7 +197,7 @@ export default async function SubmissionReview({
             </div>
           </section>
 
-          {/* Employment / OEC Details */}
+          {/* Employment & OEC Details — includes timeline */}
           <section className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="px-5 py-4 border-b border-border flex items-center gap-2">
               <Briefcase className="h-4 w-4 text-muted-foreground" />
@@ -256,6 +248,35 @@ export default async function SubmissionReview({
                   </dd>
                 </div>
               </dl>
+              {/* Record dates — subtle separator below main fields */}
+              <div className="mt-5 pt-5 border-t border-border">
+                <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-3">
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> Submitted
+                    </dt>
+                    <dd className="mt-1 text-sm text-foreground">
+                      {date(submission.created_at)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Issued
+                    </dt>
+                    <dd className="mt-1 text-sm text-foreground">
+                      {date(submission.issued_at)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Expires
+                    </dt>
+                    <dd className="mt-1 text-sm text-foreground">
+                      {date(submission.expires_at)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             </div>
           </section>
 
@@ -275,44 +296,6 @@ export default async function SubmissionReview({
               </div>
             </section>
           )}
-
-          {/* Timeline / Dates */}
-          <section className="bg-card border border-border rounded-lg overflow-hidden">
-            <div className="px-5 py-4 border-b border-border flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold text-foreground">
-                Timeline
-              </h2>
-            </div>
-            <div className="p-5">
-              <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-5">
-                <div>
-                  <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Submitted
-                  </dt>
-                  <dd className="mt-1 text-sm text-foreground">
-                    {date(submission.created_at)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Issued
-                  </dt>
-                  <dd className="mt-1 text-sm text-foreground">
-                    {date(submission.issued_at)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Expires
-                  </dt>
-                  <dd className="mt-1 text-sm text-foreground">
-                    {date(submission.expires_at)}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          </section>
         </div>
 
         {/* Right: Decision panel (1/3 width) */}
@@ -323,26 +306,32 @@ export default async function SubmissionReview({
           {/* Next pending CTA or closure card */}
           {submission.status !== "pending" &&
             (remainingCount > 0 && nextPending ? (
-              <Link
-                href={`/evaluator/submissions/${nextPending.id}`}
-                className="flex items-center justify-between gap-3 bg-card border border-border rounded-lg p-4 transition-colors hover:bg-muted group"
-              >
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {remainingCount} pending remaining
-                  </p>
-                  <p className="text-sm font-medium text-foreground truncate">
-                    Next: {nextPending.full_name}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    Departs{" "}
-                    {nextPending.departure_date
-                      ? date(nextPending.departure_date)
-                      : "—"}
-                  </p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-primary shrink-0 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
+              <div>
+                <Link
+                  href={`/evaluator/submissions/${nextPending.id}`}
+                  className="flex items-center justify-between gap-3 bg-card border border-border rounded-lg p-4 transition-colors hover:bg-muted group"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground font-medium">
+                      {remainingCount} pending remaining
+                    </p>
+                    <p className="text-sm font-medium text-foreground truncate">
+                      Next: {nextPending.full_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      Departs{" "}
+                      {nextPending.departure_date
+                        ? date(nextPending.departure_date)
+                        : "—"}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-primary shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Press <span className="font-semibold text-foreground">→</span> to
+                  skip to next pending
+                </p>
+              </div>
             ) : (
               <div className="bg-card border border-border rounded-lg p-4">
                 <p className="text-sm font-medium text-foreground">
@@ -374,7 +363,10 @@ export default async function SubmissionReview({
                   Current status
                 </p>
                 <p className="mt-1">
-                  <Badge variant={statusColor}>{submission.status}</Badge>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Badge variant={statusColor}>{submission.status}</Badge>
+                    <StatusHelp status={submission.status} />
+                  </span>
                 </p>
               </div>
               <div>
