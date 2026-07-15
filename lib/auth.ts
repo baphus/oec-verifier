@@ -1,0 +1,4 @@
+import { createServerSupabaseClient } from "./supabase/server";
+import { createAdminClient } from "./supabase/admin";
+import type { ProfileRole } from "./types";
+export async function requireActiveEvaluator(roles: ProfileRole[] = ["evaluator", "admin"]) { const supabase = await createServerSupabaseClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) throw new Error("Please sign in to continue."); const { data: profile } = await createAdminClient().from("profiles").select("id,role,active,display_name").eq("id", user.id).single(); if (!profile?.active || !roles.includes(profile.role as ProfileRole)) throw new Error("You are not authorized to perform this action."); return { user, profile: profile as { id: string; role: ProfileRole; active: boolean; display_name: string | null } }; }

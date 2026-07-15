@@ -1,0 +1,14 @@
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { env } from "./env";
+import { formatInTimeZone } from "./time";
+export const createReference = () => `OEC-${new Date().getUTCFullYear()}-${randomBytes(5).toString("hex").toUpperCase()}`;
+export const createReceiptToken = () => randomBytes(32).toString("base64url");
+export const hashReceiptToken = (token: string) => createHash("sha256").update(token, "utf8").digest("hex");
+const key = () => { const raw = Buffer.from(env().RECEIPT_TOKEN_ENCRYPTION_KEY, "base64"); if (raw.length !== 32) throw new Error("Receipt encryption is not configured."); return raw; };
+export const encryptReceiptToken = (token: string) => { const iv = randomBytes(12); const cipher = createCipheriv("aes-256-gcm", key(), iv); const encrypted = Buffer.concat([cipher.update(token, "utf8"), cipher.final()]); return `${iv.toString("base64url")}.${cipher.getAuthTag().toString("base64url")}.${encrypted.toString("base64url")}`; };
+export const decryptReceiptToken = (payload: string) => { const [iv, tag, data] = payload.split(".").map((part) => Buffer.from(part, "base64url")); if (!iv || !tag || !data || iv.length !== 12 || tag.length !== 16) throw new Error("Receipt token is unavailable."); const decipher = createDecipheriv("aes-256-gcm", key(), iv); decipher.setAuthTag(tag); return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8"); };
+export const receiptUrl = (rawToken: string) => `${env().APP_URL.replace(/\/$/, "")}/receipt/${encodeURIComponent(rawToken)}`;
+export const hashRateLimitKey = (value: string) => createHash("sha256").update(`${env().RATE_LIMIT_HASH_SECRET}:${value}`, "utf8").digest("hex");
+export const maskOec = (oec: string) => oec.length <= 4 ? "••••" : `${"•".repeat(Math.max(0, oec.length - 4))}${oec.slice(-4)}`;
+export const receiptState = (status: string, expiresAt: string | Date, now = new Date()) => status === "revoked" ? "revoked" : status === "verified" ? (new Date(expiresAt) <= now ? "expired" : "valid") : "invalid";
+export { formatInTimeZone };
