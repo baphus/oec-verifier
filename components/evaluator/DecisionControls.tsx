@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -40,6 +40,7 @@ export default function DecisionControls({
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState<Action | null>(null);
   const [pending, startTransition] = useTransition();
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const router = useRouter();
   const actionLabel =
     confirming === "verify"
@@ -90,6 +91,8 @@ export default function DecisionControls({
               : "Receipt revoked."
           );
         router.refresh();
+        // Return focus to the decision heading for keyboard users
+        setTimeout(() => headingRef.current?.focus(), 50);
       } catch {
         toast.error("The decision could not be saved. Please try again.");
         setError("The action could not be completed.");
@@ -122,9 +125,9 @@ export default function DecisionControls({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-900">Decision</h2>
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+        <h2 ref={headingRef} tabIndex={-1} className="text-sm font-semibold text-foreground outline-none">Decision</h2>
         <Badge
           variant={
             currentStatus === "verified"
@@ -144,10 +147,10 @@ export default function DecisionControls({
             <div className="space-y-2">
               <Label
                 htmlFor="decision-reason"
-                className="text-xs font-medium text-slate-600"
+                className="text-xs font-medium text-muted-foreground"
               >
                 Remarks{" "}
-                <span className="text-slate-400">(required to reject)</span>
+                <span className="text-muted-foreground">(required to reject)</span>
               </Label>
               <Textarea
                 id="decision-reason"
@@ -163,7 +166,7 @@ export default function DecisionControls({
               <Button
                 disabled={pending}
                 onClick={() => setConfirming("verify")}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                className="flex-1 bg-success hover:bg-success/90 text-primary-foreground"
                 size="sm"
               >
                 <CheckCircle2 className="h-4 w-4 mr-1.5" />
@@ -188,7 +191,7 @@ export default function DecisionControls({
             <div className="space-y-2">
               <Label
                 htmlFor="revoke-reason"
-                className="text-xs font-medium text-slate-600"
+                className="text-xs font-medium text-muted-foreground"
               >
                 Revocation reason
               </Label>
@@ -216,14 +219,14 @@ export default function DecisionControls({
         )}
 
         {currentStatus !== "pending" && currentStatus !== "verified" && (
-          <p className="text-sm text-slate-500 leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             This submission has already been decided. Its status is the source
             of truth.
           </p>
         )}
 
         {/* Resend email action */}
-        <div className="pt-3 border-t border-slate-100">
+        <div className="pt-3 border-t border-border">
           <Button
             variant="outline"
             size="sm"

@@ -27,8 +27,9 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}<Toaster position="top-right" closeButton /></body>
+      <body className="min-h-full flex flex-col"><script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('oec-theme');if(t==='dark')document.documentElement.classList.add('dark')}catch(e){}})()` }} />{children}<Toaster position="top-right" closeButton /></body>
     </html>
   );
 }

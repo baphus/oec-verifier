@@ -11,5 +11,5 @@ export default async function EvaluatorLoginPage() {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) redirect("/evaluator");
-  return <main className="evaluator-shell evaluator-auth"><Card className="evaluator-card"><CardHeader><Link href="/" className="login-brand"><Image src="/dmw_logo.png" alt="Department of Migrant Workers" width={76} height={76} priority /></Link><p className="eyebrow">OEC VERIFY · STAFF ACCESS</p><CardTitle>Evaluator sign in</CardTitle><p className="muted">Use your assigned account. Evaluator access is provisioned by an administrator.</p></CardHeader><CardContent><LoginForm /></CardContent></Card><Link className="back-public" href="/">← Return to public service</Link></main>;
+  return <div className="evaluator-page evaluator-auth"><Card className="evaluator-card"><CardHeader><Link href="/" className="login-brand"><Image src="/dmw_logo.png" alt="Department of Migrant Workers" width={76} height={76} priority /></Link><p className="eyebrow">OEC VERIFY · STAFF ACCESS</p><CardTitle>Evaluator sign in</CardTitle><p className="muted">Use your assigned account. Evaluator access is provisioned by an administrator.</p></CardHeader><CardContent><LoginForm /></CardContent></Card><Link className="back-public" href="/">← Return to public service</Link></div>;
 }

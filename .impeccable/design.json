@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 2,
+  "source": "DESIGN.md",
+  "northStar": "Civic Signal",
+  "colorCharacter": "Government Navy",
+  "elevationPhilosophy": "structural (borders and tonal layering establish structure; shadows stay quiet)",
+  "componentPhilosophy": "Precise surfaces",
+  "primitives": {
+    "colors": {
+      "light": {
+        "primary": "#093CA8",
+        "primaryForeground": "#FFFFFF",
+        "background": "#F5F7FB",
+        "surface": "#FFFFFF",
+        "text": "#111827",
+        "mutedText": "#526174",
+        "border": "#D8DFEB",
+        "input": "#9AA9BC",
+        "destructive": "#B30B22",
+        "success": "#146B3A",
+        "warning": "#765A00",
+        "ring": "#093CA8"
+      },
+      "dark": {
+        "primary": "#78A8FF",
+        "primaryForeground": "#071B38",
+        "background": "#11161F",
+        "surface": "#18202B",
+        "text": "#F3F6FB",
+        "mutedText": "#B4C0CF",
+        "border": "#354252",
+        "input": "#526175",
+        "destructive": "#FF7180",
+        "success": "#79D5A0",
+        "warning": "#F4C84A",
+        "ring": "#F4C84A"
+      }
+    },
+    "typography": {
+      "body": "Geist, var(--font-geist-sans), system-ui, sans-serif",
+      "mono": "Geist Mono, var(--font-geist-mono), monospace",
+      "display": "Georgia, serif",
+      "h1": { "size": "clamp(2.7rem, 8vw, 5.5rem)", "weight": 400, "lineHeight": ".99", "letterSpacing": "-.04em" }
+    },
+    "radii": { "sm": ".15rem", "md": ".25rem", "lg": ".35rem", "xl": ".5rem" },
+    "spacing": { "publicContent": "min(1040px, calc(100% - 40px))", "evaluatorContent": "min(1200px, 100%)", "evaluatorPage": "clamp(1.25rem, 3vw, 2.75rem)", "commonGaps": ["14px", "20px", "22px", "28px", "42px", "70px"] }
+  },
+  "tonalRamps": {
+    "civicBlue": ["oklch(0.24 0.09 260)", "oklch(0.34 0.13 260)", "oklch(0.39 0.19 260)", "oklch(0.48 0.18 260)", "oklch(0.60 0.15 260)", "oklch(0.74 0.12 260)", "oklch(0.86 0.07 260)", "oklch(0.94 0.035 260)"],
+    "decisionCrimson": ["oklch(0.25 0.09 20)", "oklch(0.35 0.14 20)", "oklch(0.42 0.18 20)", "oklch(0.52 0.18 20)", "oklch(0.64 0.17 20)", "oklch(0.75 0.14 20)", "oklch(0.86 0.08 20)", "oklch(0.94 0.04 20)"],
+    "archiveGold": ["oklch(0.25 0.08 85)", "oklch(0.36 0.11 85)", "oklch(0.46 0.14 85)", "oklch(0.58 0.15 85)", "oklch(0.70 0.14 85)", "oklch(0.80 0.12 85)", "oklch(0.89 0.08 85)", "oklch(0.96 0.04 85)"],
+    "governmentNavy": ["oklch(0.21 0.06 255)", "oklch(0.28 0.06 255)", "oklch(0.35 0.05 255)", "oklch(0.43 0.05 255)", "oklch(0.52 0.05 255)", "oklch(0.63 0.05 255)", "oklch(0.77 0.04 255)", "oklch(0.96 0.02 255)"]
+  },
+  "extensions": {
+    "shadows": {
+      "publicSurface": "0 12px 28px #102a350d",
+      "evaluatorSurface": "0 8px 24px color-mix(in srgb, var(--foreground) 7%, transparent)",
+      "mobileDrawer": "12px 0 28px rgb(0 0 0 / 15%)",
+      "cardRing": "ring-1 ring-foreground/10"
+    },
+    "motion": {
+      "drawer": ".18s ease",
+      "reducedMotion": ".01ms transitions and animations; no smooth scrolling"
+    },
+    "breakpoints": { "narrowPublic": "520px", "publicLayout": "700px", "evaluatorDrawer": "760px", "tailwindInputMd": "768px" }
+  },
+  "components": [
+    { "name": "button", "snippet": ".civic-button{background:var(--primary);color:var(--primary-foreground);border:1px solid transparent;border-radius:var(--radius-md);min-height:2rem;padding:.5rem .625rem;font:500 .875rem var(--font-geist-sans);transition:all .15s ease}.civic-button:hover{background:color-mix(in srgb,var(--primary),var(--foreground) 12%)}.civic-button:focus-visible{outline:3px solid var(--ring);outline-offset:3px}.civic-button:disabled{pointer-events:none;opacity:.5}" },
+    { "name": "button-outline", "snippet": ".civic-button-outline{background:var(--background);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius-md);padding:.5rem .625rem}.civic-button-outline:hover{background:var(--muted)}.civic-button-outline:focus-visible{outline:3px solid var(--ring);outline-offset:3px}" },
+    { "name": "input", "snippet": ".civic-input{width:100%;height:2rem;border:1px solid var(--input);border-radius:var(--radius-lg);background:var(--card);color:var(--foreground);padding:.25rem .625rem;outline:none}.civic-input::placeholder{color:var(--muted-foreground)}.civic-input:focus-visible{border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--ring) 20%,transparent)}.civic-input:disabled{opacity:.5}" },
+    { "name": "card", "snippet": ".civic-card{display:flex;flex-direction:column;gap:var(--card-spacing,1rem);border-radius:var(--radius-sm);background:var(--card);color:var(--card-foreground);padding:var(--card-spacing,1rem);box-shadow:0 0 0 1px color-mix(in srgb,var(--foreground) 10%,transparent)}" },
+    { "name": "status", "snippet": ".civic-status{display:inline-flex;align-items:center;border-radius:var(--radius-sm);padding:.125rem .5rem;font-size:.75rem;font-weight:500}.civic-status--success{background:var(--success-soft);color:var(--success)}.civic-status--warning{background:var(--warning-soft);color:var(--warning-foreground)}.civic-status--error{background:var(--destructive-soft);color:var(--destructive)}" },
+    { "name": "public-navigation", "snippet": ".civic-public-nav{position:sticky;top:0;z-index:50;border-bottom:1px solid var(--line);background:var(--card)}.civic-public-nav a{color:var(--muted-text);padding:.625rem .75rem}.civic-public-nav a:hover{background:var(--muted);color:var(--primary)}.civic-public-nav button:focus-visible,.civic-public-nav a:focus-visible{outline:3px solid var(--ring);outline-offset:3px}" },
+    { "name": "evaluator-sidebar", "snippet": ".civic-sidebar{position:sticky;top:0;width:248px;min-width:248px;height:100vh;border-right:1px solid var(--line);background:var(--card)}.civic-sidebar a{display:flex;gap:.75rem;padding:.625rem .75rem;color:var(--muted-text);border-radius:var(--radius-sm)}.civic-sidebar a[aria-current=page]{background:var(--secondary);color:var(--primary)}" },
+    { "name": "theme-toggle", "snippet": ".civic-theme-toggle{display:inline-flex;width:2.25rem;height:2.25rem;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--card);color:var(--muted-text)}.civic-theme-toggle:hover{background:var(--muted);color:var(--foreground)}.civic-theme-toggle:focus-visible{outline:3px solid var(--ring);outline-offset:3px}" }
+  ],
+  "narrative": {
+    "overview": "**Civic Signal** is a precise and efficient government verification interface. Its **Government Navy** character uses calm surfaces, clear state communication, and restrained DMW blue, crimson, and gold accents. **Structural elevation** establishes hierarchy through borders and tonal layering; shadows stay quiet. The component philosophy is **Precise surfaces**: every surface should expose the current state, next action, and reason without ceremony.",
+    "colors": "Use semantic roles for page fields, surfaces, text, boundaries, primary actions, supporting surfaces, statuses, and focus. DMW blue is the primary signal, crimson is reserved for destructive or urgent decisions, and gold is a restrained accent and focus signal. Do not introduce gradients or distribute accent colors evenly.",
+    "typography": "Geist is the body voice, Geist Mono is reserved for machine-readable identifiers, and Georgia provides the display and editorial contrast. Keep language direct and operational.",
+    "elevation": "Elevation is structural: borders and tonal layering establish structure; shadows stay quiet. Do not add floating decorative cards, dramatic shadows, or colored side borders as a universal pattern.",
+    "components": "Components should make the current condition, available action, and consequence obvious. Navigation, controls, status communication, focus, motion, and responsive behavior remain semantic and keyboard-operable.",
+    "dosAndDonts": "Use semantic tokens, visible focus, text status, familiar controls, reduced motion, and both themes. Do not add gradients, huge radii, decorative cards, casual language, hover-only behavior, raw public surface colors, analytics, route changes, or altered form semantics."
+  }
+}

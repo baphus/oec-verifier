@@ -2,10 +2,10 @@ import { EvaluatorSidebar } from "./EvaluatorSidebar";
 
 export function EvaluatorShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="evaluator-layout flex min-h-screen">
       <EvaluatorSidebar />
-      <main className="flex-1 overflow-y-auto bg-slate-50">
-        <div className="evaluator-shell">{children}</div>
+      <main className="evaluator-main flex-1 overflow-y-auto">
+        <div className="evaluator-content">{children}</div>
       </main>
     </div>
   );
