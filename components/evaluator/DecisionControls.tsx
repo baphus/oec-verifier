@@ -178,6 +178,7 @@ export default function DecisionControls({
                 ? "secondary"
                 : "destructive"
             }
+            className="uppercase"
           >
             {currentStatus}
           </Badge>

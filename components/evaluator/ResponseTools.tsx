@@ -82,13 +82,15 @@ import {
   Download,
   Ellipsis,
   Filter,
-  ListFilter,
   Search,
+  Send,
   Trash,
   XCircle,
 } from "lucide-react";
-import { bulkRejectForEvaluator, bulkVerifyForEvaluator } from "@/app/evaluator/actions";
+import { toast } from "sonner";
+import { bulkRejectForEvaluator, bulkVerifyForEvaluator, resendForEvaluator } from "@/app/evaluator/actions";
 import { getDecisionAuthors } from "@/lib/actions/evaluator";
+import { provincesByRegion } from "@/lib/data/philippines";
 
 type Row = {
   id: string;
@@ -96,17 +98,26 @@ type Row = {
   full_name: string;
   email: string;
   oec_number: string;
+  gender: string;
   category: string;
-  employer: string;
   position: string;
   jobsite: string;
+  province: string;
+  region: string;
+  contact_number: string;
+  employer: string;
   departure_date: string;
+  issued_at: string;
+  expires_at: string;
+  expired_at: string | null;
   status: string;
   decision_reason: string | null;
   decided_at: string | null;
   decided_by: string | null;
   decided_by_name: string | null;
   created_at: string;
+  latest_email_kind: string | null;
+  latest_email_status: string | null;
 };
 
 type ResponseToolsProps = {
@@ -129,6 +140,9 @@ const statusBadgeVariant = (status: string) =>
       ? "secondary"
       : "destructive" as const;
 
+const emailStatusVariant = (status: string) =>
+  status === "sent" ? "default" : status === "sending" ? "secondary" : "destructive" as const;
+
 // Multi-column search filter
 const multiColumnFilterFn: FilterFn<Row> = (row, columnId, filterValue) => {
   const searchableRowContent = `${row.original.reference} ${row.original.full_name} ${row.original.email} ${row.original.oec_number}`.toLowerCase();
@@ -136,12 +150,133 @@ const multiColumnFilterFn: FilterFn<Row> = (row, columnId, filterValue) => {
   return searchableRowContent.includes(searchTerm);
 };
 
-// Status filter
-const statusFilterFn: FilterFn<Row> = (row, columnId, filterValue: string[]) => {
+// Generic multi-select filter (array of values)
+const arrayFilterFn: FilterFn<Row> = (row, columnId, filterValue: string[]) => {
   if (!filterValue?.length) return true;
-  const status = row.getValue(columnId) as string;
-  return filterValue.includes(status);
+  const value = row.getValue(columnId) as string;
+  return filterValue.includes(value);
 };
+
+// ── Cascading Region → Province filter dropdowns ──
+function FilterRegionProvince({
+  table,
+}: {
+  table: ReturnType<typeof useReactTable<Row>>;
+}) {
+  const regionCol = table.getColumn("region");
+  const provinceCol = table.getColumn("province");
+
+  const regionOptions = useMemo(() => {
+    if (!regionCol) return [];
+    return Array.from(regionCol.getFacetedUniqueValues().keys()).sort() as string[];
+  }, [regionCol?.getFacetedUniqueValues()]);
+
+  const selectedRegion = (regionCol?.getFilterValue() as string[])?.[0] ?? "all";
+  const selectedProvince = (provinceCol?.getFilterValue() as string[])?.[0] ?? "all";
+
+  // Provinces that belong to the selected region
+  const provinceOptions = useMemo(() => {
+    if (selectedRegion === "all") return [];
+    return provincesByRegion[selectedRegion] ?? [];
+  }, [selectedRegion]);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <div className="text-xs font-medium text-foreground mb-1.5">Region</div>
+        <Select
+          value={selectedRegion}
+          onValueChange={(v) => {
+            regionCol?.setFilterValue(v === "all" ? undefined : [v]);
+            // Clear province when region changes
+            provinceCol?.setFilterValue(undefined);
+          }}
+        >
+          <SelectTrigger className="w-full h-8 text-xs">
+            <SelectValue placeholder="All regions" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="text-xs">All regions</SelectItem>
+            {regionOptions.map((r) => (
+              <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {selectedRegion !== "all" && provinceOptions.length > 0 && (
+        <div>
+          <div className="text-xs font-medium text-foreground mb-1.5">Province</div>
+          <Select
+            value={selectedProvince}
+            onValueChange={(v) => {
+              // Province filter only works when region is selected
+              provinceCol?.setFilterValue(v === "all" ? undefined : [v]);
+            }}
+          >
+            <SelectTrigger className="w-full h-8 text-xs">
+              <SelectValue placeholder="All provinces" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">All provinces</SelectItem>
+              {provinceOptions.map((p) => (
+                <SelectItem key={p} value={p} className="text-xs">{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Single filter dropdown (shadcn Select) for the consolidated filter panel ──
+function FilterDropdown({
+  label,
+  columnId,
+  table,
+}: {
+  label: string;
+  columnId: string;
+  table: ReturnType<typeof useReactTable<Row>>;
+}) {
+  const column = table.getColumn(columnId);
+  const uniqueValues = useMemo(() => {
+    if (!column) return [];
+    return Array.from(column.getFacetedUniqueValues().keys()).sort() as string[];
+  }, [column?.getFacetedUniqueValues()]);
+  const currentValue = (column?.getFilterValue() as string[])?.[0] ?? "all";
+
+  if (!uniqueValues.length) return null;
+
+  return (
+    <div>
+      <div className="text-xs font-medium text-foreground mb-1.5">{label}</div>
+      <Select
+        value={currentValue}
+        onValueChange={(v) => {
+          column?.setFilterValue(v === "all" ? undefined : [v]);
+        }}
+      >
+        <SelectTrigger className="w-full h-8 text-xs">
+          <SelectValue placeholder={`All ${label.toLowerCase()}`} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all" className="text-xs">
+            All {label.toLowerCase()}
+          </SelectItem>
+          {uniqueValues.map((v) => (
+            <SelectItem key={v} value={v} className="text-xs">
+              {v}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+
+
 
 export default function ResponseTools({ rows, exportMode = false }: ResponseToolsProps) {
   const [isPending, startTransition] = useTransition();
@@ -190,12 +325,20 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     full_name: "Applicant",
     email: "Email",
     status: "Status",
-    created_at: "Submitted",
-    oec_number: "OEC number",
-    employer: "Employer",
+    latest_email_status: "Email Delivery",
+    created_at: "Date Submitted",
+    oec_number: "OEC No.",
+    gender: "Gender",
+    category: "Category",
     position: "Position",
     jobsite: "Jobsite",
+    province: "Province",
+    region: "Region",
+    contact_number: "Contact No.",
+    employer: "Employer",
     departure_date: "Departure",
+    issued_at: "Issued on",
+    expires_at: "Expiring at",
     decided_at: "Evaluated on",
     decided_by_name: "Evaluated by",
   };
@@ -205,12 +348,18 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     "full_name",
     "email",
     "status",
+    "latest_email_status",
     "created_at",
     "oec_number",
-    "employer",
+    "gender",
+    "category",
     "position",
     "jobsite",
-    "departure_date",
+    "province",
+    "region",
+    "contact_number",
+    "issued_at",
+    "expires_at",
     "decided_at",
     "decided_by_name",
   ];
@@ -277,54 +426,119 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
       filterFn: multiColumnFilterFn,
     },
     {
-      header: "Employer",
-      accessorKey: "employer",
+      header: "OEC No.",
+      accessorKey: "oec_number",
       cell: ({ row }) => (
-        <div className="min-w-0">
-          <div className="text-foreground truncate max-w-[160px]">{row.getValue("employer")}</div>
-          <div className="text-xs text-muted-foreground truncate max-w-[160px]">
-            {row.original.position}
-          </div>
-        </div>
+        <span className="font-mono text-xs text-foreground">{row.getValue("oec_number")}</span>
       ),
-      size: 180,
+      size: 130,
+      filterFn: multiColumnFilterFn,
+    },
+    {
+      header: "Category",
+      accessorKey: "category",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.getValue("category")}</span>
+      ),
+      size: 120,
+      filterFn: arrayFilterFn,
+    },
+    {
+      header: "Position",
+      accessorKey: "position",
+      cell: ({ row }) => (
+        <span className="text-foreground truncate max-w-[160px] inline-block">{row.getValue("position")}</span>
+      ),
+      size: 160,
+      filterFn: arrayFilterFn,
     },
     {
       header: "Jobsite",
       accessorKey: "jobsite",
       cell: ({ row }) => (
+        <span className="text-muted-foreground truncate max-w-[140px] inline-block">{row.getValue("jobsite")}</span>
+      ),
+      size: 150,
+      filterFn: arrayFilterFn,
+    },
+    {
+      header: "Province",
+      accessorKey: "province",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground truncate max-w-[120px] inline-block">
+          {row.getValue("province")}
+        </span>
+      ),
+      size: 140,
+      filterFn: arrayFilterFn,
+    },
+    {
+      header: "Region",
+      accessorKey: "region",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground truncate max-w-[100px] inline-block">
+          {row.getValue("region")}
+        </span>
+      ),
+      size: 100,
+      filterFn: arrayFilterFn,
+    },
+    {
+      header: "Contact",
+      accessorKey: "contact_number",
+      cell: ({ row }) => (
         <span className="text-muted-foreground truncate max-w-[140px] inline-block">
-          {row.getValue("jobsite")}
+          {row.getValue("contact_number")}
         </span>
       ),
       size: 140,
     },
     {
-      header: "Departure",
-      accessorKey: "departure_date",
+      header: "Expiring at",
+      accessorKey: "expires_at",
       cell: ({ row }) => (
         <span className="text-muted-foreground whitespace-nowrap">
-          {formatDate(row.getValue("departure_date"))}
+          {formatDate(row.getValue("expires_at"))}
         </span>
       ),
-      size: 120,
+      size: 130,
     },
     {
       header: "Status",
       accessorKey: "status",
       cell: ({ row }) => (
         <span className="inline-flex items-center gap-1.5">
-          <Badge variant={statusBadgeVariant(row.getValue("status"))}>
+          <Badge variant={statusBadgeVariant(row.getValue("status"))} className="uppercase">
             {row.getValue("status")}
           </Badge>
           <StatusHelp status={row.getValue("status")} />
         </span>
       ),
       size: 110,
-      filterFn: statusFilterFn,
+      filterFn: arrayFilterFn,
     },
     {
-      header: "Submitted",
+      header: "Email",
+      accessorKey: "latest_email_status",
+      cell: ({ row }) => {
+        const status = row.original.latest_email_status;
+        const kind = row.original.latest_email_kind;
+        if (!status) return <span className="text-muted-foreground text-xs">—</span>;
+        return (
+          <span className="inline-flex items-center gap-1.5">
+            <Badge variant={emailStatusVariant(status)} className="uppercase text-[10px] px-1.5 py-0">
+              {status}
+            </Badge>
+            <span className="text-[10px] text-muted-foreground hidden 2xl:inline">
+              {kind === "resend" ? "Resend" : kind?.replace("decision_", "") ?? ""}
+            </span>
+          </span>
+        );
+      },
+      size: 100,
+    },
+    {
+      header: "Date Submitted",
       accessorKey: "created_at",
       cell: ({ row }) => (
         <span className="text-muted-foreground whitespace-nowrap">
@@ -363,14 +577,27 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
       id: "actions",
       header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => (
-        <Link
-          href={`/evaluator/submissions/${row.original.id}`}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline whitespace-nowrap"
-        >
-          Review <ArrowRight className="h-3 w-3" />
-        </Link>
+        <span className="inline-flex items-center gap-2">
+          <Link
+            href={`/evaluator/submissions/${row.original.id}`}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline whitespace-nowrap"
+          >
+            Review <ArrowRight className="h-3 w-3" />
+          </Link>
+          {row.original.status === "verified" && (
+            <button
+              onClick={() => handleResend(row.original.id)}
+              disabled={isPending}
+              className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 whitespace-nowrap"
+              title="Resend receipt email"
+            >
+              <Send className="h-3 w-3" />
+              <span className="hidden 2xl:inline">Resend</span>
+            </button>
+          )}
+        </span>
       ),
-      size: 80,
+      size: 100,
       enableHiding: false,
     },
   ], []);
@@ -396,48 +623,56 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     },
     initialState: {
       columnVisibility: {
-        departure_date: false,
+        province: false,
+        region: false,
+        contact_number: false,
+        issued_at: false,
+        expired_at: false,
         decided_at: false,
         decided_by_name: false,
       },
     },
   });
 
-  // ── Status facet values for the filter popover ──
-  const uniqueStatusValues = useMemo(() => {
-    const statusColumn = table.getColumn("status");
-    if (!statusColumn) return [];
-    return Array.from(statusColumn.getFacetedUniqueValues().keys()).sort();
-  }, [table.getColumn("status")?.getFacetedUniqueValues()]);
-
-  const statusCounts = useMemo(() => {
-    const statusColumn = table.getColumn("status");
-    if (!statusColumn) return new Map<string, number>();
-    return statusColumn.getFacetedUniqueValues();
-  }, [table.getColumn("status")?.getFacetedUniqueValues()]);
-
-  const selectedStatuses = useMemo(() => {
-    const filterValue = table.getColumn("status")?.getFilterValue() as string[];
-    return filterValue ?? [];
-  }, [table.getColumn("status")?.getFilterValue()]);
-
-  const handleStatusChange = (checked: boolean, value: string) => {
-    const filterValue = table.getColumn("status")?.getFilterValue() as string[];
-    const newFilterValue = filterValue ? [...filterValue] : [];
-    if (checked) {
-      newFilterValue.push(value);
-    } else {
-      const index = newFilterValue.indexOf(value);
-      if (index > -1) newFilterValue.splice(index, 1);
-    }
-    table.getColumn("status")?.setFilterValue(newFilterValue.length ? newFilterValue : undefined);
-  };
-
   // ── Search filter ──
   const searchValue = (table.getColumn("reference")?.getFilterValue() ?? "") as string;
   const handleSearchChange = (value: string) => {
     table.getColumn("reference")?.setFilterValue(value);
   };
+
+  // ── Active filter tags for filter bar ──
+  const activeFilters = useMemo(() => {
+    const tags: { column: string; label: string; value: string }[] = [];
+    for (const cf of columnFilters) {
+      if (cf.id === "reference") continue; // search has its own UI
+      const colLabel = labels[cf.id] ?? cf.id;
+      const vals = cf.value as string[];
+      if (vals?.length) {
+        for (const v of vals) {
+          tags.push({ column: cf.id, label: colLabel, value: v });
+        }
+      }
+    }
+    return tags;
+  }, [columnFilters]);
+
+  const removeFilter = (columnId: string) => {
+    if (columnId === "reference") { handleSearchChange(""); return; }
+    const col = table.getColumn(columnId);
+    if (!col) return;
+    col.setFilterValue(undefined);
+  };
+
+  const clearAllFilters = () => {
+    handleSearchChange("");
+    table.resetColumnFilters();
+  };
+
+  const hasAnyFilter = columnFilters.some((cf) => {
+    if (cf.id === "reference") return false;
+    const vals = cf.value as string[];
+    return vals?.length > 0;
+  });
 
   // ── Bulk actions ──
   const selectedRows = table.getSelectedRowModel().rows;
@@ -469,6 +704,23 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
       setRejectReason("");
       setRejectDialogOpen(false);
       table.resetRowSelection();
+    });
+  };
+
+  const handleResend = (id: string) => {
+    startTransition(async () => {
+      try {
+        const result = await resendForEvaluator(id);
+        if (!result.ok) {
+          toast.error("Receipt email could not be sent.");
+        } else if ("emailWarning" in result && result.emailWarning) {
+          toast.warning("Receipt email queued; delivery could not be confirmed.");
+        } else {
+          toast.success("Receipt email sent.");
+        }
+      } catch {
+        toast.error("Receipt email could not be sent.");
+      }
     });
   };
 
@@ -505,15 +757,16 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
           <div className="relative">
             <Input
               ref={inputRef}
-              className={`peer min-w-60 ps-9 ${searchValue ? "pe-9" : ""}`}
+              style={{ paddingLeft: "2.75rem" }}
+              className={`peer min-w-60 ${searchValue ? "pe-9" : ""}`}
               value={searchValue}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search name, ref, email, OEC..."
               type="text"
               aria-label="Search submissions"
             />
-            <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
-              <ListFilter size={16} strokeWidth={2} aria-hidden="true" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-muted-foreground/80 peer-disabled:opacity-50">
+              <Search size={16} strokeWidth={2} aria-hidden="true" />
             </div>
             {searchValue && (
               <button
@@ -529,39 +782,40 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
             )}
           </div>
 
-          {/* Status filter */}
+          {/* Consolidated filters dropdown */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline">
-                <Filter className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} aria-hidden="true" />
-                Status
-                {selectedStatuses.length > 0 && (
-                  <span className="-me-1 ms-3 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
-                    {selectedStatuses.length}
+              <Button variant="outline" size="sm">
+                <Filter className="-ms-1 me-2 opacity-60" size={14} strokeWidth={2} aria-hidden="true" />
+                Filters
+                {activeFilters.length > 0 && (
+                  <span className="-me-1 ms-2 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
+                    {activeFilters.length}
                   </span>
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="min-w-36 p-3" align="start">
-              <div className="space-y-3">
-                <div className="text-xs font-medium text-muted-foreground">Filters</div>
-                <div className="space-y-3">
-                  {uniqueStatusValues.map((value, i) => (
-                    <div key={value} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`status-${i}`}
-                        checked={selectedStatuses.includes(value)}
-                        onCheckedChange={(checked: boolean) => handleStatusChange(checked, value)}
-                      />
-                      <Label htmlFor={`status-${i}`} className="flex grow justify-between gap-2 font-normal">
-                        {value}
-                        <span className="ms-2 text-xs text-muted-foreground">
-                          {statusCounts.get(value)}
-                        </span>
-                      </Label>
-                    </div>
-                  ))}
+            <PopoverContent className="w-72 p-4" align="start" side="bottom">
+              <div className="space-y-5">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Filter submissions
                 </div>
+                <FilterDropdown label="Status" columnId="status" table={table} />
+                <FilterDropdown label="Category" columnId="category" table={table} />
+                <FilterDropdown label="Position" columnId="position" table={table} />
+                <FilterDropdown label="Jobsite" columnId="jobsite" table={table} />
+                <FilterRegionProvince table={table} />
+                {(activeFilters.length > 0 || searchValue) && (
+                  <div className="pt-2 border-t border-border">
+                    <button
+                      type="button"
+                      onClick={() => clearAllFilters()}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                )}
               </div>
             </PopoverContent>
           </Popover>
@@ -594,7 +848,7 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
           </DropdownMenu>
         </div>
 
-        {/* Right side: bulk actions (demo style — inline when rows selected) */}
+        {/* Right side: bulk actions (inline when rows selected) */}
         <div className="flex items-center gap-3">
           {selectedCount > 0 && !exportMode && (
             <>
@@ -670,6 +924,36 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
           )}
         </div>
       </div>
+
+      {/* ── Active filter tags ── */}
+      {hasAnyFilter && (
+        <div className="flex flex-wrap items-center gap-2 mb-5">
+          {activeFilters.map((tag) => (
+            <Badge
+              key={`${tag.column}-${tag.value}`}
+              variant="secondary"
+              className="gap-1.5 px-3 py-1 text-xs font-normal"
+            >
+              <span className="font-medium text-muted-foreground">{tag.label}:</span> {tag.value}
+              <button
+                type="button"
+                onClick={() => removeFilter(tag.column)}
+                className="ml-0.5 inline-flex items-center rounded-sm hover:bg-muted-foreground/20 p-0.5"
+                aria-label={`Remove ${tag.label} filter`}
+              >
+                <CircleX size={12} strokeWidth={2} />
+              </button>
+            </Badge>
+          ))}
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors ml-1"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
 
       {/* ── Export mode: field picker + download ── */}
       {exportMode && (

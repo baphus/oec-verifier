@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireActiveEvaluator } from "@/lib/auth";
-import { getAllSubmissions, getDecisionAuthors } from "@/lib/actions/evaluator";
+import { getAllSubmissions, getDecisionAuthors, getEmailDeliveriesBatch } from "@/lib/actions/evaluator";
 import ResponseTools from "@/components/evaluator/ResponseTools";
 import { AlertTriangle } from "lucide-react";
 
@@ -13,11 +13,20 @@ async function load() {
     const authorIds = Array.from(
       new Set(rows.map((r) => r.decided_by).filter(Boolean))
     ) as string[];
-    const authors = authorIds.length ? await getDecisionAuthors(authorIds) : {};
-    return rows.map((r) => ({
-      ...r,
-      decided_by_name: r.decided_by ? (authors[r.decided_by] ?? null) : null,
-    }));
+    const [authors, emailMap] = await Promise.all([
+      authorIds.length ? getDecisionAuthors(authorIds) : Promise.resolve({} as Record<string, string>),
+      getEmailDeliveriesBatch(rows.map((r) => r.id)),
+    ]);
+    return rows.map((r) => {
+      const deliveries = emailMap[r.id] ?? [];
+      const latest = deliveries[0] ?? null;
+      return {
+        ...r,
+        decided_by_name: r.decided_by ? (authors[r.decided_by] ?? null) : null,
+        latest_email_kind: latest?.kind ?? null,
+        latest_email_status: latest?.status ?? null,
+      };
+    });
   } catch {
     redirect("/evaluator/login");
   }

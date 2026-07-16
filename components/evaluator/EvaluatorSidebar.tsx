@@ -10,9 +10,11 @@ import {
   Menu,
   X,
   User,
+  Shield,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { evaluatorLogout } from "@/app/evaluator/actions";
+import { getEvaluatorProfile } from "@/lib/actions/evaluator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Image from "next/image";
 
@@ -20,12 +22,17 @@ const navItems = [
   { href: "/evaluator", label: "Dashboard", icon: LayoutDashboard },
   { href: "/evaluator/responses", label: "Submissions", icon: FileText },
   { href: "/evaluator/export", label: "Export", icon: Download },
-  { href: "/evaluator/account", label: "Account", icon: User },
 ] as const;
 
 export function EvaluatorSidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [profile, setProfile] = useState<{ display_name: string | null; role: string; email: string } | null>(null);
+
+  useEffect(() => {
+    getEvaluatorProfile().then(setProfile).catch(() => {});
+  }, []);
+
   const isActive = (href: string) =>
     href === "/evaluator" ? pathname === href : pathname.startsWith(href);
 
@@ -83,7 +90,28 @@ export function EvaluatorSidebar() {
         </ul>
       </nav>
       <div className="mx-4 border-t border-border" />
-      <div className="px-3 py-4 space-y-2">
+      {/* Profile section — bottom of sidebar */}
+      <div className="px-4 py-3 border-t border-border">
+        <Link
+          href="/evaluator/account"
+          onClick={() => setOpen(false)}
+          className="flex items-center gap-3 group"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground text-sm font-semibold">
+            {(profile?.display_name ?? profile?.email ?? "?")[0].toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+              {profile?.display_name ?? "Evaluator"}
+            </p>
+            <p className="flex items-center gap-1 text-xs text-muted-foreground capitalize">
+              <Shield className="h-3 w-3" />
+              {profile?.role ?? "evaluator"}
+            </p>
+          </div>
+        </Link>
+      </div>
+      <div className="px-3 pb-4">
         <form action={evaluatorLogout}>
           <button
             type="submit"

@@ -14,5 +14,22 @@ export async function submitPublicApplication(form: FormData) {
   return { referenceNumber: result.reference, token: result.token };
 }
 export async function getPublicReceipt(token: string) {
-  try { const result = await retrieveReceipt(token); const qrCodeDataUrl = await QRCode.toDataURL(receiptUrl(token)); return { referenceNumber: result.reference, status: result.status, state: result.state, submittedAt: result.issuedAt, expiresAt: result.expiresAt, qrCodeDataUrl }; } catch { return null; }
+  try {
+    const result = await retrieveReceipt(token);
+    const qrCodeDataUrl = await QRCode.toDataURL(receiptUrl(token));
+    return {
+      referenceNumber: result.reference, status: result.status, state: result.state,
+      issuedAt: result.issuedAt, expiresAt: result.expiresAt,
+      fullName: result.fullName, firstName: result.firstName, middleName: result.middleName,
+      lastName: result.lastName, suffix: result.suffix,
+      oecNumber: result.oecNumber, email: result.email,
+      gender: result.gender, category: result.category,
+      philippineAddress: result.philippineAddress, province: result.province, region: result.region,
+      employer: result.employer, position: result.position, jobsite: result.jobsite,
+      contactNumber: result.contactNumber, departureDate: result.departureDate, details: result.details,
+      decisionReason: result.decisionReason, decidedAt: result.decidedAt,
+      submittedAt: result.submittedAt,
+      qrCodeDataUrl,
+    };
+  } catch { return null; }
 }

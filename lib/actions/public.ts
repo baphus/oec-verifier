@@ -14,7 +14,23 @@ export async function createSubmission(input: PublicApplicationInput, ipKeyHash:
 }
 export async function retrieveReceipt(token: unknown): Promise<PublicReceipt> {
   if (typeof token !== "string" || token.length < 40 || token.length > 100) throw new Error("Receipt not found or expired.");
-  const { data, error } = await createAdminClient().from("submissions").select("reference,oec_number,status,issued_at,expires_at").eq("receipt_token_hash", hashReceiptToken(token)).maybeSingle();
+  const { data, error } = await createAdminClient().from("submissions").select(
+    "reference,oec_number,status,issued_at,expires_at,full_name,first_name,middle_name,last_name,suffix,email,gender,category,philippine_address,province,region,employer,position,jobsite,contact_number,departure_date,details,decision_reason,decided_at,created_at"
+  ).eq("receipt_token_hash", hashReceiptToken(token)).maybeSingle();
   if (error || !data) throw new Error("Receipt not found or expired.");
-  return { reference: data.reference, oecMasked: maskOec(data.oec_number), status: data.status, state: receiptState(data.status, data.expires_at), issuedAt: data.issued_at, expiresAt: data.expires_at };
+  const name = [data.first_name, data.middle_name, data.last_name, data.suffix].filter(Boolean).join(" ");
+  return {
+    reference: data.reference, oecMasked: maskOec(data.oec_number),
+    status: data.status, state: receiptState(data.status, data.expires_at),
+    issuedAt: data.issued_at, expiresAt: data.expires_at,
+    fullName: data.full_name, firstName: data.first_name, middleName: data.middle_name,
+    lastName: data.last_name, suffix: data.suffix,
+    oecNumber: data.oec_number, email: data.email,
+    gender: data.gender, category: data.category,
+    philippineAddress: data.philippine_address, province: data.province, region: data.region,
+    employer: data.employer, position: data.position, jobsite: data.jobsite,
+    contactNumber: data.contact_number, departureDate: data.departure_date, details: data.details,
+    decisionReason: data.decision_reason, decidedAt: data.decided_at,
+    submittedAt: data.created_at,
+  };
 }

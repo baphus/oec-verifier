@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireActiveEvaluator } from "@/lib/auth";
-import { getSubmission, getPendingQueue, getDecisionAuthors } from "@/lib/actions/evaluator";
+import { getSubmission, getPendingQueue, getDecisionAuthors, getEmailDeliveries } from "@/lib/actions/evaluator";
+import type { EmailDeliveryStatus } from "@/lib/actions/evaluator";
 import { recordSubmissionView } from "@/app/evaluator/actions";
 import DecisionControls from "@/components/evaluator/DecisionControls";
 import { NextPendingShortcut } from "@/components/evaluator/NextPendingShortcut";
@@ -33,17 +34,30 @@ const date = (value: string | null) =>
       }).format(new Date(value))
     : "—";
 
+const kindLabels: Record<string, string> = {
+  initial: "Initial Confirmation",
+  decision_verified: "Verification Notice",
+  decision_rejected: "Rejection Notice",
+  decision_revoked: "Revocation Notice",
+  resend: "Resend Request",
+};
+const statusVariant = (s: string) =>
+  s === "sent" ? "default" : s === "sending" ? "secondary" : "destructive" as const;
+
 async function loadSubmission(id: string) {
   try {
     await requireActiveEvaluator();
-    const submission = await getSubmission(id);
+    const [submission, deliveries] = await Promise.all([
+      getSubmission(id),
+      getEmailDeliveries(id),
+    ]);
     await recordSubmissionView(id);
     let evaluatedBy: string | null = null;
     if (submission.decided_by) {
       const authors = await getDecisionAuthors([submission.decided_by]);
       evaluatedBy = authors[submission.decided_by] ?? null;
     }
-    return { submission, evaluatedBy };
+    return { submission, deliveries, evaluatedBy };
   } catch {
     redirect("/evaluator");
   }
@@ -55,7 +69,7 @@ export default async function SubmissionReview({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [{ submission, evaluatedBy }, pendingQueue] = await Promise.all([
+  const [{ submission, deliveries, evaluatedBy }, pendingQueue] = await Promise.all([
     loadSubmission(id),
     getPendingQueue(),
   ]);
@@ -107,7 +121,7 @@ export default async function SubmissionReview({
             </p>
           </div>
           <span className="inline-flex items-center gap-1.5">
-            <Badge variant={statusColor} className="text-sm px-3 py-1">
+            <Badge variant={statusColor} className="text-sm px-3 py-1 uppercase">
               {submission.status}
             </Badge>
             <StatusHelp status={submission.status} />
@@ -224,14 +238,6 @@ export default async function SubmissionReview({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Employer / Agency
-                  </dt>
-                  <dd className="mt-1 text-sm text-foreground">
-                    {submission.employer}
-                  </dd>
-                </div>
-                <div>
                   <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                     <Globe className="h-3 w-3" /> Jobsite / Destination
                   </dt>
@@ -319,10 +325,7 @@ export default async function SubmissionReview({
                       Next: {nextPending.full_name}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
-                      Departs{" "}
-                      {nextPending.departure_date
-                        ? date(nextPending.departure_date)
-                        : "—"}
+                      {nextPending.jobsite ?? "—"}
                     </p>
                   </div>
                   <ArrowRight className="h-4 w-4 text-primary shrink-0 group-hover:translate-x-0.5 transition-transform" />
@@ -364,7 +367,7 @@ export default async function SubmissionReview({
                 </p>
                 <p className="mt-1">
                   <span className="inline-flex items-center gap-1.5">
-                    <Badge variant={statusColor}>{submission.status}</Badge>
+                    <Badge variant={statusColor} className="uppercase">{submission.status}</Badge>
                     <StatusHelp status={submission.status} />
                   </span>
                 </p>
@@ -401,6 +404,44 @@ export default async function SubmissionReview({
                   details in the audit event.
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Email delivery status */}
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground">
+                Email Delivery
+              </h2>
+            </div>
+            <div className="p-5 space-y-4">
+              {deliveries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No email deliveries recorded.</p>
+              ) : (
+                deliveries.map((d) => (
+                  <div key={d.id} className="flex items-start justify-between gap-3 pb-3 border-b border-border last:border-b-0 last:pb-0">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-foreground">
+                        {kindLabels[d.kind] ?? d.kind}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {d.sent_at
+                          ? `Sent ${date(d.sent_at)}`
+                          : d.status === "failed"
+                            ? `Failed${d.last_error_code ? `: ${d.last_error_code}` : ""}`
+                            : d.status === "sending"
+                              ? "Sending…"
+                              : "Queued"}
+                        {d.attempts > 0 && d.status !== "sent" && ` (${d.attempts} attempt${d.attempts > 1 ? "s" : ""})`}
+                      </p>
+                    </div>
+                    <Badge variant={statusVariant(d.status)} className="uppercase shrink-0 text-[10px]">
+                      {d.status}
+                    </Badge>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </aside>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireActiveEvaluator } from "@/lib/auth";
-import { getPendingQueue, getPendingCount, getDashboard } from "@/lib/actions/evaluator";
+import { getPendingQueue, getPendingCount, getDashboard, getEvaluatorProfile } from "@/lib/actions/evaluator";
 import {
   Clock,
   CheckCircle2,
@@ -21,15 +21,25 @@ const date = (value: string) =>
     timeZone: "Asia/Manila",
   }).format(new Date(value));
 
+const today = () =>
+  new Intl.DateTimeFormat("en-PH", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "Asia/Manila",
+  }).format(new Date());
+
 async function load() {
   try {
     await requireActiveEvaluator();
-    const [pending, pendingTotal, verifiedRes, rejectedRes, revokedRes] = await Promise.all([
+    const [pending, pendingTotal, verifiedRes, rejectedRes, revokedRes, profile] = await Promise.all([
       getPendingQueue(),
       getPendingCount(),
       getDashboard({ status: "verified" }),
       getDashboard({ status: "rejected" }),
       getDashboard({ status: "revoked" }),
+      getEvaluatorProfile(),
     ]);
     return {
       pending,
@@ -37,6 +47,7 @@ async function load() {
       verified: verifiedRes.total,
       rejected: rejectedRes.total,
       revoked: revokedRes.total,
+      profile,
     };
   } catch {
     redirect("/evaluator/login");
@@ -44,12 +55,12 @@ async function load() {
 }
 
 export default async function EvaluatorDashboard() {
-  const { pending, pendingTotal, verified, rejected, revoked } = await load();
+  const { pending, pendingTotal, verified, rejected, revoked, profile } = await load();
   const total = pendingTotal + verified + rejected + revoked;
 
   return (
     <div className="evaluator-page">
-      {/* Page header */}
+      {/* Greeting + date */}
       <div className="mb-8">
         <p className="text-xs font-bold tracking-wide text-primary mb-1 uppercase">
           Evaluator Workspace
@@ -58,10 +69,10 @@ export default async function EvaluatorDashboard() {
           className="text-3xl font-normal text-foreground"
           style={{ fontFamily: "var(--font-display, Georgia, serif)" }}
         >
-          Dashboard
+          Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"},{profile.display_name || "Evaluator"}.
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Overview of submission activity across your workspace.
+          {today()} &middot; {total} submission{total === 1 ? "" : "s"} in the workspace
         </p>
       </div>
 
@@ -140,7 +151,7 @@ export default async function EvaluatorDashboard() {
                   Pending queue
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Submissions awaiting review, sorted by departure
+                  Submissions awaiting review, sorted by submission time
                 </p>
               </div>
             </div>
@@ -159,12 +170,9 @@ export default async function EvaluatorDashboard() {
               aria-label="Pending submissions queue"
               tabIndex={0}
             >
-              <table className="w-full text-sm text-left min-w-[600px]">
+              <table className="w-full text-sm text-left min-w-[700px]">
                 <thead className="bg-muted border-b border-border">
                   <tr>
-                    <th className="px-5 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                      Departure
-                    </th>
                     <th className="px-5 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Reference
                     </th>
@@ -172,7 +180,13 @@ export default async function EvaluatorDashboard() {
                       Applicant
                     </th>
                     <th className="px-5 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                      Position / Employer
+                      OEC No.
+                    </th>
+                    <th className="px-5 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                      Position / Jobsite
+                    </th>
+                    <th className="px-5 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                      Category
                     </th>
                     <th className="px-5 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Action
@@ -185,9 +199,6 @@ export default async function EvaluatorDashboard() {
                       key={s.id}
                       className="hover:bg-muted/60 transition-colors"
                     >
-                      <td className="px-5 py-3.5 text-muted-foreground whitespace-nowrap">
-                        {s.departure_date ? date(s.departure_date) : "—"}
-                      </td>
                       <td className="px-5 py-3.5 font-mono text-xs text-foreground">
                         {s.reference}
                       </td>
@@ -199,11 +210,17 @@ export default async function EvaluatorDashboard() {
                           {s.email}
                         </div>
                       </td>
+                      <td className="px-5 py-3.5 font-mono text-xs text-foreground">
+                        {s.oec_number}
+                      </td>
                       <td className="px-5 py-3.5">
                         <div className="text-foreground">{s.position}</div>
                         <div className="text-xs text-muted-foreground">
-                          {s.employer}
+                          {s.jobsite}
                         </div>
+                      </td>
+                      <td className="px-5 py-3.5 text-muted-foreground">
+                        {s.category}
                       </td>
                       <td className="px-5 py-3.5">
                         <Link
