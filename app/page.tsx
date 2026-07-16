@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { PublicHeader, PublicFooter } from "@/components/public/Shell";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
@@ -14,7 +15,9 @@ export default function Home() {
               Submit your application for airport access in a few clear steps. You&apos;ll receive a reference number to keep for your records and use when checking your receipt.
             </p>
             <div className="hero-actions">
-              <Link className="button button-primary" href="/apply">Start an application <span aria-hidden="true">→</span></Link>
+              <Button asChild>
+                <Link href="/apply">Start an application <span aria-hidden="true">→</span></Link>
+              </Button>
               <Link className="text-link" href="/apply">Need to start an application?</Link>
             </div>
           </div>

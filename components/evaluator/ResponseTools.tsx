@@ -684,8 +684,15 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
       .filter((r) => r.original.status === "pending")
       .map((r) => r.original.id);
     if (!pendingIds.length) return;
+    const toastId = "bulk-verify";
+    toast.loading(`Verifying ${pendingIds.length} submission${pendingIds.length > 1 ? "s" : ""}…`, { id: toastId });
     startTransition(async () => {
-      await bulkVerifyForEvaluator(pendingIds);
+      try {
+        await bulkVerifyForEvaluator(pendingIds);
+        toast.success(`${pendingIds.length} submission${pendingIds.length > 1 ? "s" : ""} verified.`, { id: toastId });
+      } catch {
+        toast.error("Could not complete bulk verification.", { id: toastId });
+      }
       table.resetRowSelection();
     });
   };
@@ -695,10 +702,17 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
       .filter((r) => r.original.status === "pending")
       .map((r) => r.original.id);
     if (!pendingIds.length) return;
+    const toastId = "bulk-reject";
+    toast.loading(`Rejecting ${pendingIds.length} submission${pendingIds.length > 1 ? "s" : ""}…`, { id: toastId });
     startTransition(async () => {
-      await bulkRejectForEvaluator(
-        pendingIds.map((id) => ({ id, reason: rejectReason }))
-      );
+      try {
+        await bulkRejectForEvaluator(
+          pendingIds.map((id) => ({ id, reason: rejectReason }))
+        );
+        toast.success(`${pendingIds.length} submission${pendingIds.length > 1 ? "s" : ""} rejected.`, { id: toastId });
+      } catch {
+        toast.error("Could not complete bulk rejection.", { id: toastId });
+      }
       setRejectReason("");
       setRejectDialogOpen(false);
       table.resetRowSelection();
@@ -890,7 +904,7 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
                     <AlertDialogAction
                       onClick={handleBulkReject}
                       disabled={!rejectReason.trim() || isPending}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      variant="destructive"
                     >
                       {isPending ? "Rejecting..." : "Reject"}
                     </AlertDialogAction>

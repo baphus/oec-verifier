@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, XCircle, RotateCcw, Send } from "lucide-react";
+import { CheckCircle2, XCircle, RotateCcw, Send, Loader2 } from "lucide-react";
 import { StatusHelp } from "@/components/evaluator/StatusHelp";
 
 type Action = "verify" | "reject" | "revoke";
@@ -211,10 +211,15 @@ export default function DecisionControls({
               <Button
                 disabled={pending}
                 onClick={() => setConfirming("verify")}
-                className="flex-1 bg-success hover:bg-success/90 text-primary-foreground"
+                variant="default"
+                className="flex-1"
                 size="sm"
               >
-                <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                {pending ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                )}
                 {pending ? "Processing…" : "Verify"}
               </Button>
               <Button
@@ -224,7 +229,11 @@ export default function DecisionControls({
                 className="flex-1"
                 size="sm"
               >
-                <XCircle className="h-4 w-4 mr-1.5" />
+                {pending ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <XCircle className="h-4 w-4 mr-1.5" />
+                )}
                 Reject
               </Button>
             </div>
@@ -260,7 +269,11 @@ export default function DecisionControls({
               className="w-full"
               size="sm"
             >
-              <RotateCcw className="h-4 w-4 mr-1.5" />
+              {pending ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-1.5" />
+              )}
               {pending ? "Processing…" : "Revoke receipt"}
             </Button>
           </>
@@ -282,7 +295,11 @@ export default function DecisionControls({
             onClick={resend}
             className="w-full text-xs"
           >
-            <Send className="h-3.5 w-3.5 mr-1.5" />
+            {pending ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5 mr-1.5" />
+            )}
             Resend receipt email
           </Button>
         </div>
