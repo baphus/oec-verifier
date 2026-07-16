@@ -124,7 +124,7 @@ export default function ApplicationForm() {
     <div className="consent-row"><Checkbox id="consent" name="consent" value={PRIVACY_CONSENT_VERSION} aria-invalid={!!errors.consent} aria-describedby="consent-copy consent-error" /><Label htmlFor="consent" id="consent-copy">I consent to OEC Verify using this information to review my application and contact me about it.</Label></div>
     {errors.consent && <p className="field-error" id="consent-error" role="alert">{errors.consent}</p>}
     {formError && <p className="form-error" id="form-error" role="alert">{formError}</p>}
-    <div className="form-submit"><p>Your information is handled securely and is only used for this application.</p><Button type="submit" size="lg" disabled={isPending}>{isPending ? "Submitting…" : "Submit application"}<span aria-hidden="true">→</span></Button></div>
+    <div className="form-submit"><p>Your information is handled securely and is only used for this application.</p><Button type="submit" size="lg" disabled={isPending} className="w-full sm:w-auto">{isPending ? "Submitting…" : "Submit application"}<span aria-hidden="true">→</span></Button></div>
   </form>;
 }
 

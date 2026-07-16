@@ -14,7 +14,7 @@ export default function SuccessPage() {
         <p>Your application is now <strong>under review</strong>. Our evaluators will review your submission and you will receive an email once a decision has been made.</p>
         <p className="muted-copy">Please allow some time for the review process. We appreciate your patience.</p>
         <div className="success-actions">
-          <Button asChild>
+          <Button asChild size="lg" className="w-full sm:w-auto">
             <Link href="/">Return home</Link>
           </Button>
           <Link className="text-link" href="/apply">Start another application</Link>

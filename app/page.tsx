@@ -15,10 +15,10 @@ export default function Home() {
               Submit your application for airport access in a few clear steps. You&apos;ll receive a reference number to keep for your records and use when checking your receipt.
             </p>
             <div className="hero-actions">
-              <Button asChild>
+              <Button asChild size="lg">
                 <Link href="/apply">Start an application <span aria-hidden="true">→</span></Link>
               </Button>
-              <Link className="text-link" href="/apply">Need to start an application?</Link>
+              <Link className="text-link" href="#what-to-expect">See what to expect</Link>
             </div>
           </div>
           <div className="hero-image" aria-hidden="true">
@@ -28,14 +28,14 @@ export default function Home() {
               width={320}
               height={640}
               priority
-              sizes="(max-width: 767px) 240px, 320px"
+              sizes="(max-width: 519px) 240px, (max-width: 699px) 320px, 320px"
               className="hero-image-img"
             />
           </div>
         </section>
 
         <section className="service-intro"><div><h2>One clear path from application to review.</h2></div><p>OEC Verify helps applicants submit required information securely for review. Take your time, use accurate details, and save your reference number when you finish.</p></section>
-        <section className="trust-strip" aria-label="What to expect">
+        <section id="what-to-expect" className="trust-strip" aria-label="What to expect">
           <div><strong>01</strong><span>Complete the form</span></div>
           <div><strong>02</strong><span>Receive your reference</span></div>
           <div><strong>03</strong><span>Check your receipt anytime</span></div>

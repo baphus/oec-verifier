@@ -19,6 +19,7 @@ export function PublicHeader() {
     <header className="sticky top-0 z-50 w-full border-b border-[var(--line)] bg-[var(--card)]">
       <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-3 sm:px-5">
         <Link href="/" onClick={() => setOpen(false)} className="inline-flex min-w-0 items-center gap-2.5 text-[var(--dmw-blue)]" aria-label="OEC Verify home">
+          <Image src="/bagong-pilipinas.png" alt="Bagong Pilipinas" width={40} height={40} priority className="h-9 w-9 shrink-0 object-contain sm:h-10 sm:w-10" />
           <Image src="/dmw_logo.png" alt="Department of Migrant Workers" width={44} height={44} priority className="h-10 w-10 shrink-0 object-contain sm:h-11 sm:w-11" />
           <span className="grid min-w-0 gap-0.5"><span className="truncate text-[0.78rem] font-extrabold tracking-[0.06em] sm:text-sm">OEC <em className="not-italic text-[var(--dmw-crimson)]">Verify</em></span><small className="hidden text-[0.55rem] font-semibold tracking-[0.06em] text-[var(--muted-text)] sm:block">DEPARTMENT OF MIGRANT WORKERS</small></span>
         </Link>

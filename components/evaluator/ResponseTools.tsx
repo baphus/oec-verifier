@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -68,6 +70,7 @@ import {
 } from "@tanstack/react-table";
 import {
   ArrowRight,
+  Check,
   CheckCircle2,
   CheckCircle,
   ChevronDown,
@@ -81,14 +84,16 @@ import {
   Columns3,
   Download,
   Ellipsis,
+  Eye,
   Filter,
+  Loader2,
   Search,
   Send,
   Trash,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { bulkRejectForEvaluator, bulkVerifyForEvaluator, resendForEvaluator } from "@/app/evaluator/actions";
+import { bulkRejectForEvaluator, bulkVerifyForEvaluator, resendForEvaluator, verifyForEvaluator, rejectForEvaluator } from "@/app/evaluator/actions";
 import { getDecisionAuthors } from "@/lib/actions/evaluator";
 import { provincesByRegion } from "@/lib/data/philippines";
 
@@ -115,8 +120,6 @@ type Row = {
   decided_by: string | null;
   decided_by_name: string | null;
   created_at: string;
-  latest_email_kind: string | null;
-  latest_email_status: string | null;
 };
 
 type ResponseToolsProps = {
@@ -138,9 +141,6 @@ const statusBadgeVariant = (status: string) =>
     : status === "pending"
       ? "secondary"
       : "destructive" as const;
-
-const emailStatusVariant = (status: string) =>
-  status === "sent" ? "default" : status === "sending" ? "secondary" : "destructive" as const;
 
 // Multi-column search filter
 const multiColumnFilterFn: FilterFn<Row> = (row, columnId, filterValue) => {
@@ -278,6 +278,7 @@ function FilterDropdown({
 
 
 export default function ResponseTools({ rows, exportMode = false }: ResponseToolsProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -300,6 +301,7 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
   authorNamesRef.current = authorNames;
 
   useEffect(() => {
+    if (exportMode) return; // Skip in export mode
     const ids = rows.map((r) => r.decided_by).filter(Boolean) as string[];
     if (ids.length > 0) {
       getDecisionAuthors(Array.from(new Set(ids))).then(setAuthorNames).catch(() => {});
@@ -315,6 +317,8 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     "reference",
     "full_name",
     "email",
+    "oec_number",
+    "category",
     "status",
     "created_at",
   ]);
@@ -324,7 +328,6 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     full_name: "Applicant",
     email: "Email",
     status: "Status",
-    latest_email_status: "Email Delivery",
     created_at: "Date Submitted",
     oec_number: "OEC No.",
     gender: "Gender",
@@ -346,7 +349,6 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     "full_name",
     "email",
     "status",
-    "latest_email_status",
     "created_at",
     "oec_number",
     "gender",
@@ -356,14 +358,23 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     "province",
     "region",
     "contact_number",
+    "departure_date",
     "issued_at",
     "expires_at",
     "decided_at",
     "decided_by_name",
   ];
 
+  // ── Date range state (export mode) ──
+  const [dateRange, setDateRange] = useState<{ from: string; to: string }>({ from: "", to: "" });
+
   // ── Bulk action state ──
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+
+  // ── Single-row action state ──
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
+  const [rejectTargetReason, setRejectTargetReason] = useState("");
 
   // ── Hiding some columns by default on narrow screens ──
   // (columns are hidden via columnVisibility state)
@@ -516,26 +527,6 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
       filterFn: arrayFilterFn,
     },
     {
-      header: "Email",
-      accessorKey: "latest_email_status",
-      cell: ({ row }) => {
-        const status = row.original.latest_email_status;
-        const kind = row.original.latest_email_kind;
-        if (!status) return <span className="text-muted-foreground text-xs">—</span>;
-        return (
-          <span className="inline-flex items-center gap-1.5">
-            <Badge variant={emailStatusVariant(status)} className="uppercase text-[10px] px-1.5 py-0">
-              {status}
-            </Badge>
-            <span className="text-[10px] text-muted-foreground hidden 2xl:inline">
-              {kind === "resend" ? "Resend" : kind?.replace("decision_", "") ?? ""}
-            </span>
-          </span>
-        );
-      },
-      size: 100,
-    },
-    {
       header: "Date Submitted",
       accessorKey: "created_at",
       cell: ({ row }) => (
@@ -574,28 +565,54 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     {
       id: "actions",
       header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => (
-        <span className="inline-flex items-center gap-2">
-          <Link
-            href={`/evaluator/submissions/${row.original.id}`}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline whitespace-nowrap"
-          >
-            Review <ArrowRight className="h-3 w-3" />
-          </Link>
-          {row.original.status === "verified" && (
-            <button
-              onClick={() => handleResend(row.original.id)}
-              disabled={isPending}
-              className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 whitespace-nowrap"
-              title="Resend receipt email"
-            >
-              <Send className="h-3 w-3" />
-              <span className="hidden 2xl:inline">Resend</span>
-            </button>
-          )}
-        </span>
-      ),
-      size: 100,
+      cell: ({ row }) => {
+        const status = row.original.status;
+        const id = row.original.id;
+        const isPendingRow = status === "pending";
+        const isAcceptingThis = acceptingId === id;
+        const hasAnySingleAction = acceptingId !== null || rejectTargetId !== null;
+        return (
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="xs" asChild>
+              <Link href={`/evaluator/submissions/${id}`}>
+                <Eye className="size-3.5" />
+                <span className="hidden lg:inline">View</span>
+              </Link>
+            </Button>
+            {isPendingRow && (
+              <>
+                <Button
+                  variant="default"
+                  size="xs"
+                  disabled={isAcceptingThis || hasAnySingleAction}
+                  onClick={() => handleAccept(id)}
+                >
+                  {isAcceptingThis ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Check className="size-3.5" />
+                  )}
+                  <span className="hidden lg:inline">{isAcceptingThis ? "Accepting…" : "Accept"}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={hasAnySingleAction}
+                  onClick={() => {
+                    setRejectTargetId(id);
+                    setRejectTargetReason("");
+                  }}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <XCircle className="size-3.5" />
+                  <span className="hidden lg:inline">Reject</span>
+                </Button>
+              </>
+            )}
+          </div>
+        );
+      },
+      size: 200,
       enableHiding: false,
     },
   ], []);
@@ -736,19 +753,84 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     });
   };
 
+  // ── Single-row Accept handler ──
+  const handleAccept = (id: string) => {
+    const toastId = `accept-${id}`;
+    toast.loading("Verifying submission…", { id: toastId });
+    setAcceptingId(id);
+    startTransition(async () => {
+      try {
+        const result = await verifyForEvaluator(id);
+        if (!result.ok) {
+          toast.error("Could not verify this submission.", { id: toastId });
+        } else if ("emailWarning" in result && (result as any).emailWarning) {
+          toast.warning("Submission verified; notification delivery could not be confirmed.", { id: toastId });
+        } else {
+          toast.success("Submission verified.", { id: toastId });
+        }
+        router.refresh();
+      } catch {
+        toast.error("Could not verify this submission.", { id: toastId });
+      } finally {
+        setAcceptingId(null);
+      }
+    });
+  };
+
+  // ── Single-row Reject handler ──
+  const handleSingleReject = () => {
+    if (!rejectTargetId || !rejectTargetReason.trim()) return;
+    const toastId = `reject-${rejectTargetId}`;
+    toast.loading("Rejecting submission…", { id: toastId });
+    const id = rejectTargetId;
+    startTransition(async () => {
+      try {
+        const result = await rejectForEvaluator(id, rejectTargetReason);
+        if (!result.ok) {
+          toast.error("Could not reject this submission.", { id: toastId });
+        } else {
+          toast.success("Submission rejected.", { id: toastId });
+        }
+        router.refresh();
+      } catch {
+        toast.error("Could not reject this submission.", { id: toastId });
+      } finally {
+        setRejectTargetId(null);
+        setRejectTargetReason("");
+      }
+    });
+  };
+
   // ── Export ──
   const allSelected = allFields.every((f) => fields.includes(f));
   const toggleAll = () => setFields(allSelected ? [] : [...allFields]);
   const toggle = (field: string) =>
     setFields((f) => (f.includes(field) ? f.filter((x) => x !== field) : [...f, field]));
 
+  // Date-filtered rows for export
+  const dateFilteredRows = useMemo(() => {
+    const from = dateRange.from ? new Date(dateRange.from) : null;
+    const to = dateRange.to ? new Date(dateRange.to + "T23:59:59") : null;
+    return rows.filter((r) => {
+      const d = new Date(r.created_at);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+  }, [rows, dateRange]);
+
   const download = () => {
-    const filteredData = rows;
+    const filteredData = dateFilteredRows;
     const csv = [
       fields.map((f) => labels[f] || f.replace(/_/g, " ")).join(","),
       ...filteredData.map((r) =>
         fields
-          .map((f) => `"${String((r as any)[f] ?? "").replaceAll('"', '""')}"`)
+          .map((f) => {
+            let val = String((r as any)[f] ?? "").replaceAll('"', '""');
+            // Prevent CSV formula injection
+            if (/^[=+\-@\t\r]/.test(val)) val = "'" + val;
+            return `"${val}"`;
+          })
           .join(",")
       ),
     ].join("\n");
@@ -764,101 +846,103 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     <>
       {/* ── Filters & Controls bar (demo style) ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-3">
-          {/* Search */}
-          <div className="relative">
-            <Input
-              ref={inputRef}
-              style={{ paddingLeft: "2.75rem" }}
-              className={`peer min-w-60 ${searchValue ? "pe-9" : ""}`}
-              value={searchValue}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search name, ref, email, OEC..."
-              type="text"
-              aria-label="Search submissions"
-            />
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-muted-foreground/80 peer-disabled:opacity-50">
-              <Search size={16} strokeWidth={2} aria-hidden="true" />
-            </div>
-            {searchValue && (
-              <button
-                className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-lg text-muted-foreground/80 outline-offset-2 transition-colors hover:text-foreground focus:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label="Clear filter"
-                onClick={() => {
-                  handleSearchChange("");
-                  inputRef.current?.focus();
-                }}
-              >
-                <CircleX size={16} strokeWidth={2} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-
-          {/* Consolidated filters dropdown */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Filter className="-ms-1 me-2 opacity-60" size={14} strokeWidth={2} aria-hidden="true" />
-                Filters
-                {activeFilters.length > 0 && (
-                  <span className="-me-1 ms-2 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
-                    {activeFilters.length}
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72 p-4" align="start" side="bottom">
-              <div className="space-y-5">
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Filter submissions
-                </div>
-                <FilterDropdown label="Status" columnId="status" table={table} />
-                <FilterDropdown label="Category" columnId="category" table={table} />
-                <FilterDropdown label="Position" columnId="position" table={table} />
-                <FilterDropdown label="Jobsite" columnId="jobsite" table={table} />
-                <FilterRegionProvince table={table} />
-                {(activeFilters.length > 0 || searchValue) && (
-                  <div className="pt-2 border-t border-border">
-                    <button
-                      type="button"
-                      onClick={() => clearAllFilters()}
-                      className="text-xs font-medium text-primary hover:underline"
-                    >
-                      Clear all filters
-                    </button>
-                  </div>
-                )}
+        {!exportMode && (
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+              <Input
+                ref={inputRef}
+                style={{ paddingLeft: "2.75rem" }}
+                className={`peer min-w-60 ${searchValue ? "pe-9" : ""}`}
+                value={searchValue}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Search name, ref, email, OEC..."
+                type="text"
+                aria-label="Search submissions"
+              />
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-muted-foreground/80 peer-disabled:opacity-50">
+                <Search size={16} strokeWidth={2} aria-hidden="true" />
               </div>
-            </PopoverContent>
-          </Popover>
+              {searchValue && (
+                <button
+                  className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-lg text-muted-foreground/80 outline-offset-2 transition-colors hover:text-foreground focus:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Clear filter"
+                  onClick={() => {
+                    handleSearchChange("");
+                    inputRef.current?.focus();
+                  }}
+                >
+                  <CircleX size={16} strokeWidth={2} aria-hidden="true" />
+                </button>
+              )}
+            </div>
 
-          {/* Column visibility */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Columns3 className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} aria-hidden="true" />
-                View
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                    onSelect={(event) => event.preventDefault()}
-                  >
-                    {labels[column.id] ?? column.id.replace(/_/g, " ")}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+            {/* Consolidated filters dropdown */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Filter className="-ms-1 me-2 opacity-60" size={14} strokeWidth={2} aria-hidden="true" />
+                  Filters
+                  {activeFilters.length > 0 && (
+                    <span className="-me-1 ms-2 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
+                      {activeFilters.length}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-4" align="start" side="bottom">
+                <div className="space-y-5">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Filter submissions
+                  </div>
+                  <FilterDropdown label="Status" columnId="status" table={table} />
+                  <FilterDropdown label="Category" columnId="category" table={table} />
+                  <FilterDropdown label="Position" columnId="position" table={table} />
+                  <FilterDropdown label="Jobsite" columnId="jobsite" table={table} />
+                  <FilterRegionProvince table={table} />
+                  {(activeFilters.length > 0 || searchValue) && (
+                    <div className="pt-2 border-t border-border">
+                      <button
+                        type="button"
+                        onClick={() => clearAllFilters()}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        Clear all filters
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Column visibility */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Columns3 className="-ms-1 me-2 opacity-60" size={16} strokeWidth={2} aria-hidden="true" />
+                  View
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                {table
+                  .getAllColumns()
+                  .filter((column) => column.getCanHide())
+                  .map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      {labels[column.id] ?? column.id.replace(/_/g, " ")}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
 
         {/* Right side: bulk actions (inline when rows selected) */}
         <div className="flex items-center gap-3">
@@ -967,10 +1051,44 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
         </div>
       )}
 
-      {/* ── Export mode: field picker + download ── */}
+      {/* ── Export mode: date range + field picker + download ── */}
       {exportMode && (
         <div className="bg-card border border-border rounded-lg p-5 mb-6">
-          <div className="flex items-center justify-between mb-3">
+          {/* Date range filter */}
+          <div className="mb-5">
+            <p className="text-sm font-semibold text-foreground mb-3">Date Submitted</p>
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">From</label>
+                <input
+                  type="date"
+                  value={dateRange.from}
+                  onChange={(e) => setDateRange((prev) => ({ ...prev, from: e.target.value }))}
+                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/50"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">To</label>
+                <input
+                  type="date"
+                  value={dateRange.to}
+                  onChange={(e) => setDateRange((prev) => ({ ...prev, to: e.target.value }))}
+                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/50"
+                />
+              </div>
+              {(dateRange.from || dateRange.to) && (
+                <button
+                  type="button"
+                  onClick={() => setDateRange({ from: "", to: "" })}
+                  className="text-xs font-medium text-primary hover:underline mb-0.5"
+                >
+                  Clear dates
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mb-3 pt-3 border-t border-border">
             <p className="text-sm font-semibold text-foreground">Fields in CSV</p>
             <button
               type="button"
@@ -986,11 +1104,9 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
                 key={f}
                 className="inline-flex items-center gap-2 text-sm text-foreground cursor-pointer"
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={fields.includes(f)}
-                  onChange={() => toggle(f)}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/20"
+                  onCheckedChange={() => toggle(f)}
                 />
                 {labels[f] ?? f.replace(/_/g, " ")}
               </label>
@@ -1000,9 +1116,9 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
             <p className="text-xs text-muted-foreground">
               Generated in your browser from the submissions available to this workspace.
             </p>
-            <Button onClick={download} size="sm" className="shrink-0">
+            <Button onClick={download} size="sm" className="shrink-0" disabled={dateFilteredRows.length === 0}>
               <Download className="h-4 w-4 mr-1.5" />
-              Download CSV ({rows.length})
+              Download CSV ({dateFilteredRows.length} of {rows.length})
             </Button>
           </div>
         </div>
@@ -1023,16 +1139,20 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
               submissions
             </p>
           </div>
-          <div className="overflow-x-auto" role="region" aria-label="All evaluator responses table" tabIndex={0}>
+          <div className="overflow-auto max-h-[calc(100vh-320px)]" role="region" aria-label="All evaluator responses table" tabIndex={0}>
             <Table className="min-w-[800px]">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                  <TableRow key={headerGroup.id} className="hover:bg-transparent sticky top-0 z-20 bg-card">
                     {headerGroup.headers.map((header) => (
                       <TableHead
                         key={header.id}
                         style={{ width: `${header.getSize()}px` }}
-                        className="h-11"
+                        className={cn(
+                          "h-11",
+                          header.column.id === "select" && "sticky left-0 z-20 bg-card",
+                          header.column.id === "actions" && "sticky right-0 z-20 bg-card border-l border-border"
+                        )}
                       >
                         {header.isPlaceholder ? null : header.column.getCanSort() ? (
                           <div
@@ -1072,7 +1192,14 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
                   table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="last:py-0">
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            "last:py-0",
+                            cell.column.id === "select" && "sticky left-0 z-10 bg-card",
+                            cell.column.id === "actions" && "sticky right-0 z-10 bg-card border-l border-border"
+                          )}
+                        >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
@@ -1182,6 +1309,56 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
           </div>
         </div>
       )}
+
+      {/* ── Single-row reject dialog ── */}
+      <AlertDialog
+        open={rejectTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejectTargetId(null);
+            setRejectTargetReason("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <div className="flex flex-col gap-2 max-sm:items-center sm:flex-row sm:gap-4">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border" aria-hidden="true">
+              <CircleAlert className="opacity-80" size={16} strokeWidth={2} />
+            </div>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reject this submission?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Rejecting will mark the submission as rejected. The applicant will be notified by email.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          </div>
+          <div className="px-6 pb-2">
+            <Label htmlFor="single-reject-reason" className="text-sm font-medium">
+              Remarks <span className="text-destructive">*</span>
+            </Label>
+            <textarea
+              id="single-reject-reason"
+              value={rejectTargetReason}
+              onChange={(e) => setRejectTargetReason(e.target.value)}
+              placeholder="Explain why this submission was rejected..."
+              className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/50 min-h-[80px] resize-y"
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setRejectTargetId(null); setRejectTargetReason(""); }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSingleReject}
+              disabled={!rejectTargetReason.trim() || isPending}
+              variant="destructive"
+            >
+              {isPending ? "Rejecting…" : "Reject"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

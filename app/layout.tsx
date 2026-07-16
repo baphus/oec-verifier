@@ -14,8 +14,49 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OEC Verify | DMW",
-  description: "Secure airport application intake",
+  title: {
+    default: "OEC Verify | DMW",
+    template: "%s | OEC Verify",
+  },
+  description:
+    "Secure digital application intake and verification for overseas Filipino workers — Department of Migrant Workers",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://oec-verify.vercel.app"
+  ),
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/dmw_logo.png", type: "image/png", sizes: "44x44" },
+    ],
+    apple: { url: "/dmw_logo.png", sizes: "44x44", type: "image/png" },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_PH",
+    siteName: "OEC Verify",
+    title: "OEC Verify | DMW",
+    description:
+      "Secure digital application intake and verification for overseas Filipino workers — Department of Migrant Workers",
+    images: [
+      {
+        url: "/dmw_logo.png",
+        width: 44,
+        height: 44,
+        alt: "Department of Migrant Workers logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "OEC Verify | DMW",
+    description:
+      "Secure digital application intake and verification for overseas Filipino workers — Department of Migrant Workers",
+    images: ["/dmw_logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

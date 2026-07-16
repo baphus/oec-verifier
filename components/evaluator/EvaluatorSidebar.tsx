@@ -97,12 +97,19 @@ export function EvaluatorSidebar() {
           onClick={() => setOpen(false)}
           className="flex items-center gap-3 group"
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground text-sm font-semibold">
-            {(profile?.display_name ?? profile?.email ?? "?")[0].toUpperCase()}
+          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-secondary">
+            <Image
+              src="/default-avatar.svg"
+              alt=""
+              width={36}
+              height={36}
+              className="h-full w-full object-cover"
+              priority
+            />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-              {profile?.display_name ?? "Evaluator"}
+              {profile?.display_name || profile?.email || "Evaluator"}
             </p>
             <p className="flex items-center gap-1 text-xs text-muted-foreground capitalize">
               <Shield className="h-3 w-3" />
