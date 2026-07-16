@@ -15,6 +15,7 @@ import {
   Pencil,
   Check,
   X,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,16 +43,20 @@ export function AccountSettings({ profile }: { profile: Profile }) {
   const [displayName, setDisplayName] = useState(profile.display_name ?? "");
 
   const handleSave = () => {
+    const toastId = "account-save";
+    toast.loading("Saving…", { id: toastId });
     startTransition(async () => {
       try {
         const result = await updateEvaluatorProfile({ display_name: displayName.trim() || undefined });
         if (result.ok) {
-          toast.success("Display name updated.");
+          toast.success("Display name updated.", { id: toastId });
           setEditing(false);
           router.refresh();
+        } else {
+          toast.error("Could not update profile.", { id: toastId });
         }
       } catch {
-        toast.error("Could not update profile.");
+        toast.error("Could not update profile.", { id: toastId });
       }
     });
   };
@@ -130,7 +135,7 @@ export function AccountSettings({ profile }: { profile: Profile }) {
                           disabled={pending}
                           aria-label="Save"
                         >
-                          <Check className="h-4 w-4" />
+                          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                         </Button>
                         <Button
                           size="icon"

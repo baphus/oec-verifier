@@ -11,9 +11,18 @@ import { toast } from "sonner";
 
 export default function LoginForm() {
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+
+  function validate(email: string, password: string) {
+    const errors: Record<string, string> = {};
+    if (!email.trim()) errors.email = "Email is required.";
+    else if (!/^\S+@\S+\.\S+$/.test(email)) errors.email = "Enter a valid email address.";
+    if (!password) errors.password = "Password is required.";
+    return errors;
+  }
 
   return (
     <form
@@ -21,13 +30,15 @@ export default function LoginForm() {
       onSubmit={(event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
+        const email = String(form.get("email") ?? "");
+        const password = String(form.get("password") ?? "");
         setError("");
+        const errors = validate(email, password);
+        setFieldErrors(errors);
+        if (Object.keys(errors).length > 0) return;
         startTransition(async () => {
           try {
-            const result = await evaluatorLogin({
-              email: String(form.get("email") ?? ""),
-              password: String(form.get("password") ?? ""),
-            });
+            const result = await evaluatorLogin({ email, password });
             if (result.ok) {
               toast.success("Signed in successfully.");
               router.push("/evaluator");
@@ -50,8 +61,12 @@ export default function LoginForm() {
           type="email"
           autoComplete="username"
           placeholder="you@example.com"
-          required
+          aria-invalid={!!fieldErrors.email}
+          aria-describedby={fieldErrors.email ? "evaluator-email-error" : undefined}
         />
+        {fieldErrors.email && (
+          <p className="text-xs text-destructive mt-1" id="evaluator-email-error" role="alert">{fieldErrors.email}</p>
+        )}
       </div>
       <div className="auth-field">
         <Label htmlFor="evaluator-password">Password</Label>
@@ -62,7 +77,8 @@ export default function LoginForm() {
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             placeholder="Enter your password"
-            required
+            aria-invalid={!!fieldErrors.password}
+            aria-describedby={fieldErrors.password ? "evaluator-password-error" : undefined}
           />
           <button
             type="button"
@@ -74,6 +90,9 @@ export default function LoginForm() {
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
+        {fieldErrors.password && (
+          <p className="text-xs text-destructive mt-1" id="evaluator-password-error" role="alert">{fieldErrors.password}</p>
+        )}
       </div>
       {error && (
         <Alert variant="destructive">
