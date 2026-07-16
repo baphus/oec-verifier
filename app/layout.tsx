@@ -24,10 +24,7 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL || "https://oec-verify.vercel.app"
   ),
   icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/dmw_logo.png", type: "image/png", sizes: "44x44" },
-    ],
+    icon: { url: "/dmw_logo.png", type: "image/png", sizes: "44x44" },
     apple: { url: "/dmw_logo.png", sizes: "44x44", type: "image/png" },
   },
   openGraph: {
