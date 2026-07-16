@@ -87,7 +87,6 @@ export async function sendReceiptEmail(input: {
   middleName?: string;
   lastName?: string;
   suffix?: string;
-  employer?: string;
   position?: string;
   gender?: string;
   category?: string;
@@ -139,7 +138,6 @@ export async function sendReceiptEmail(input: {
   if (input.category) rows += row("Category", v(input.category));
   if (input.contactNumber) rows += row("Contact No.", h(input.contactNumber));
   if (input.position) rows += row("Position", v(input.position));
-  if (input.employer && input.employer !== "N/A") rows += row("Employer", v(input.employer));
   if (input.jobsite) rows += row("Jobsite", v(input.jobsite));
   if (input.philippineAddress) rows += row("Address", v(input.philippineAddress));
   if (input.province) rows += row("Province", v(input.province));
@@ -198,7 +196,6 @@ export async function sendReceiptEmail(input: {
     input.category ? `Category: ${input.category}` : null,
     input.contactNumber ? `Contact: ${input.contactNumber}` : null,
     input.position ? `Position: ${input.position}` : null,
-    input.employer && input.employer !== "N/A" ? `Employer: ${input.employer}` : null,
     input.jobsite ? `Jobsite: ${input.jobsite}` : null,
     input.philippineAddress ? `Address: ${input.philippineAddress}` : null,
     input.province ? `Province: ${input.province}` : null,

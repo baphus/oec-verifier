@@ -25,7 +25,7 @@ export async function getPublicReceipt(token: string) {
       oecNumber: result.oecNumber, email: result.email,
       gender: result.gender, category: result.category,
       philippineAddress: result.philippineAddress, province: result.province, region: result.region,
-      employer: result.employer, position: result.position, jobsite: result.jobsite,
+      position: result.position, jobsite: result.jobsite,
       contactNumber: result.contactNumber, departureDate: result.departureDate, details: result.details,
       decisionReason: result.decisionReason, decidedAt: result.decidedAt,
       submittedAt: result.submittedAt,

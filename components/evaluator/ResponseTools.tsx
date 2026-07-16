@@ -105,7 +105,6 @@ type Row = {
   province: string;
   region: string;
   contact_number: string;
-  employer: string;
   departure_date: string;
   issued_at: string;
   expires_at: string;
@@ -335,7 +334,6 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     province: "Province",
     region: "Region",
     contact_number: "Contact No.",
-    employer: "Employer",
     departure_date: "Departure",
     issued_at: "Issued on",
     expires_at: "Expiring at",

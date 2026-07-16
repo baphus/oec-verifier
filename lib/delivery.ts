@@ -10,7 +10,7 @@ type DeliveryRow = {
   decided_at: string | null; jobsite: string;
   oec_number: string; issued_at: string;
   first_name: string; middle_name: string; last_name: string; suffix: string;
-  employer: string; position: string; gender: string; category: string;
+  position: string; gender: string; category: string;
   philippine_address: string; province: string; region: string;
   contact_number: string; departure_date: string | null; details: string;
   created_at: string; consented_at: string;
@@ -30,7 +30,7 @@ export async function deliverPendingEmail(submissionId: string, kind: "initial" 
       // rich receipt fields
       oecNumber: row.oec_number, issuedAt: row.issued_at,
       firstName: row.first_name, middleName: row.middle_name, lastName: row.last_name, suffix: row.suffix,
-      employer: row.employer, position: row.position,
+      position: row.position,
       gender: row.gender, category: row.category,
       philippineAddress: row.philippine_address, province: row.province, region: row.region,
       contactNumber: row.contact_number, departureDate: row.departure_date ?? undefined, details: row.details,

@@ -9,7 +9,7 @@ const text = (max: number) => z.string().trim().min(1).max(max);
 export const submissionSchema = z.object({
   fullName: text(150), email: z.string().trim().email().max(254),
   oecNumber: text(50).regex(/^[A-Za-z0-9][A-Za-z0-9\- /]{2,49}$/),
-  employer: text(200), position: text(150),
+  position: text(150),
   issuedAt: z.coerce.date(), expiresAt: z.coerce.date(),
 }).superRefine((v, ctx) => { if (v.expiresAt <= v.issuedAt) ctx.addIssue({ code: "custom", path: ["expiresAt"], message: "Expiry must follow issue date" }); });
 export type SubmissionInput = z.infer<typeof submissionSchema>;
@@ -37,7 +37,7 @@ export type PublicReceipt = {
   oecNumber: string; email: string;
   gender: string; category: string;
   philippineAddress: string; province: string; region: string;
-  employer: string; position: string; jobsite: string;
+  position: string; jobsite: string;
   contactNumber: string; departureDate: string | null; details: string;
   decisionReason: string | null; decidedAt: string | null;
   submittedAt: string;

@@ -26,7 +26,6 @@ type SafeReceipt = {
   philippineAddress?: string;
   province?: string;
   region?: string;
-  employer?: string;
   position?: string;
   jobsite?: string;
   contactNumber?: string;
@@ -122,9 +121,16 @@ export default async function ReceiptPage({
     .filter(Boolean)
     .join(" ");
 
+  const now = new Date();
+  const printedTimestamp = now.toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+  const receiptUrlStr = receiptUrl(token);
+
   return (
     <main className="receipt-page">
-      {/* ── toolbar ──────────────────────────────────────── */}
+      {/* ── screen toolbar ─────────────────────────────────── */}
       <div className="receipt-toolbar">
         <Link className="brand" href="/">
           <Image
@@ -144,19 +150,51 @@ export default async function ReceiptPage({
 
       {/* ── receipt card ─────────────────────────────────── */}
       <div className={`receipt-card receipt-${knownState.toLowerCase()}`}>
-        {/* status banner */}
+
+        {/* print-only: DMW official header */}
+        <div className="print-only-header">
+          <Image
+            className="print-only-logo"
+            src="/dmw_logo.png"
+            alt="DMW"
+            width={48}
+            height={48}
+          />
+          <div className="print-only-header-text">
+            <span className="print-only-republic">Republic of the Philippines</span>
+            <span className="print-only-dept">Department of Migrant Workers</span>
+            <span className="print-only-system">OEC VERIFY</span>
+          </div>
+        </div>
+
+        {/* print-only: Official receipt title */}
+        <h1 className="print-only-title">OFFICIAL OEC RECEIPT</h1>
+
+        {/* print-only: reference number line */}
+        <p className="print-only-ref">
+          Reference: <strong>{v(receipt?.referenceNumber)}</strong>
+        </p>
+
+        {/* print-only: status line */}
+        <div className={`print-only-status print-only-status-${knownState.toLowerCase()}`}>
+          STATUS: {knownState}
+        </div>
+
+        <hr className="receipt-rule print-only-rule" />
+
+        {/* screen-only: status banner (hidden in print) */}
         <div className={`receipt-banner ${banner.cssClass}`}>
           <strong>{banner.title}</strong>
           {banner.body}
         </div>
 
-        {/* heading */}
-        <h1>OEC Application Receipt</h1>
-        <p className="receipt-body">
+        {/* screen heading */}
+        <h1 className="screen-only">OEC Application Receipt</h1>
+        <p className="receipt-body screen-only">
           Department of Migrant Workers &bull; Overseas Employment Certificate
         </p>
 
-        <hr className="receipt-rule" />
+        <hr className="receipt-rule screen-only" />
 
         {/* ── receipt info ──────────────────────────────── */}
         <Section heading="Receipt Information">
@@ -183,14 +221,6 @@ export default async function ReceiptPage({
           <Field label="Gender" value={v(receipt?.gender)} />
           <Field label="Category" value={v(receipt?.category)} />
           <Field label="Position" value={v(receipt?.position)} />
-          <Field
-            label="Employer"
-            value={
-              receipt?.employer && receipt.employer !== "N/A"
-                ? receipt.employer
-                : "—"
-            }
-          />
           <Field label="Jobsite" value={v(receipt?.jobsite)} />
           <Field
             label="Philippine Address"
@@ -241,7 +271,7 @@ export default async function ReceiptPage({
         </Section>
 
         {/* ── QR code ───────────────────────────────────── */}
-          {isLive && qr && (
+        {isLive && qr && (
           <div className="receipt-qr-section">
             <Image
               src={qr}
@@ -253,17 +283,45 @@ export default async function ReceiptPage({
             <span className="receipt-qr-label">
               Scan to verify this receipt
             </span>
-            <a className="receipt-verify-link" href={receiptUrl(token)}>
-              {receiptUrl(token)}
+            <a className="receipt-verify-link" href={receiptUrlStr}>
+              {receiptUrlStr}
             </a>
           </div>
         )}
+
+        {/* print-only: verification line */}
+        <div className="print-only-verify-line">
+          Verification: Scan the QR code above or visit{" "}
+          <strong>{receiptUrlStr}</strong>
+        </div>
 
         {/* ── footer ─────────────────────────────────────── */}
         <div className="receipt-footer-text">
           This official receipt is issued by the Department of Migrant Workers.
           <br />
           Verification is available via QR code scan or at the DMW website.
+        </div>
+
+        {/* print-only: official footer */}
+        <div className="print-only-footer">
+          <div className="print-only-footer-dept">
+            Department of Migrant Workers
+          </div>
+          <div className="print-only-footer-address">
+            Blas F. Ople Building, Ortigas Avenue Corner Meralco Avenue,
+            Pasig City, Metro Manila, Philippines
+          </div>
+          <div className="print-only-footer-contact">
+            Tel: (02) 8721-0140 &nbsp;|&nbsp; Website: www.dmw.gov.ph
+          </div>
+          <div className="print-only-printed-on">
+            Printed on: {printedTimestamp}
+          </div>
+        </div>
+
+        {/* print-only: watermark */}
+        <div className="print-only-watermark" aria-hidden="true">
+          OFFICIAL RECEIPT
         </div>
       </div>
 
