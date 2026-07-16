@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getPublicReceipt } from "@/lib/actions/submissions";
 import { receiptUrl } from "@/lib/security";
-import PrintButton from "@/components/public/PrintButton";
+import DownloadPdfButton from "@/components/public/DownloadPdfButton";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -121,11 +121,6 @@ export default async function ReceiptPage({
     .filter(Boolean)
     .join(" ");
 
-  const now = new Date();
-  const printedTimestamp = now.toLocaleString("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
   const receiptUrlStr = receiptUrl(token);
 
   return (
@@ -145,42 +140,13 @@ export default async function ReceiptPage({
             <small>SECURE APPLICATION INTAKE</small>
           </span>
         </Link>
-        <PrintButton />
+        <DownloadPdfButton token={token} />
       </div>
 
       {/* ── receipt card ─────────────────────────────────── */}
       <div className={`receipt-card receipt-${knownState.toLowerCase()}`}>
 
-        {/* print-only: DMW official header */}
-        <div className="print-only-header">
-          <Image
-            className="print-only-logo"
-            src="/dmw_logo.png"
-            alt="DMW"
-            width={48}
-            height={48}
-          />
-          <div className="print-only-header-text">
-            <span className="print-only-republic">Republic of the Philippines</span>
-            <span className="print-only-dept">Department of Migrant Workers</span>
-            <span className="print-only-system">OEC VERIFY</span>
-          </div>
-        </div>
-
-        {/* print-only: Official receipt title */}
-        <h1 className="print-only-title">OFFICIAL OEC RECEIPT</h1>
-
-        {/* print-only: reference number line */}
-        <p className="print-only-ref">
-          Reference: <strong>{v(receipt?.referenceNumber)}</strong>
-        </p>
-
-        {/* print-only: status line */}
-        <div className={`print-only-status print-only-status-${knownState.toLowerCase()}`}>
-          STATUS: {knownState}
-        </div>
-
-        <hr className="receipt-rule print-only-rule" />
+        <hr className="receipt-rule" />
 
         {/* screen-only: status banner (hidden in print) */}
         <div className={`receipt-banner ${banner.cssClass}`}>
@@ -289,12 +255,6 @@ export default async function ReceiptPage({
           </div>
         )}
 
-        {/* print-only: verification line */}
-        <div className="print-only-verify-line">
-          Verification: Scan the QR code above or visit{" "}
-          <strong>{receiptUrlStr}</strong>
-        </div>
-
         {/* ── footer ─────────────────────────────────────── */}
         <div className="receipt-footer-text">
           This official receipt is issued by the Department of Migrant Workers.
@@ -302,27 +262,7 @@ export default async function ReceiptPage({
           Verification is available via QR code scan or at the DMW website.
         </div>
 
-        {/* print-only: official footer */}
-        <div className="print-only-footer">
-          <div className="print-only-footer-dept">
-            Department of Migrant Workers
-          </div>
-          <div className="print-only-footer-address">
-            Blas F. Ople Building, Ortigas Avenue Corner Meralco Avenue,
-            Pasig City, Metro Manila, Philippines
-          </div>
-          <div className="print-only-footer-contact">
-            Tel: (02) 8721-0140 &nbsp;|&nbsp; Website: www.dmw.gov.ph
-          </div>
-          <div className="print-only-printed-on">
-            Printed on: {printedTimestamp}
-          </div>
-        </div>
 
-        {/* print-only: watermark */}
-        <div className="print-only-watermark" aria-hidden="true">
-          OFFICIAL RECEIPT
-        </div>
       </div>
 
       <p className="receipt-note">
