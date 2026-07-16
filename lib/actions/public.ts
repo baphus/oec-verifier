@@ -10,7 +10,7 @@ export async function createSubmission(input: PublicApplicationInput, ipKeyHash:
   if (error || !data) throw new Error(error?.message === "rate_limited" ? "Too many submissions. Please try again later." : "We could not submit your application. Please try again.");
   const row = data as unknown as { submission_id: string | null; reference: string | null; expires_at: string | null; receipt_token_ciphertext: string | null; was_existing: boolean };
   if (!row.submission_id || !row.reference || !row.expires_at || !row.receipt_token_ciphertext) throw new Error("Too many submissions. Please try again later.");
-  const persistedToken = decryptReceiptToken(row.receipt_token_ciphertext); return { id: row.submission_id, reference: row.reference, token: persistedToken, expiresAt: row.expires_at, shouldSendInitialEmail: !row.was_existing };
+  const persistedToken = decryptReceiptToken(row.receipt_token_ciphertext); return { id: row.submission_id, reference: row.reference, token: persistedToken, expiresAt: row.expires_at };
 }
 export async function retrieveReceipt(token: unknown): Promise<PublicReceipt> {
   if (typeof token !== "string" || token.length < 40 || token.length > 100) throw new Error("Receipt not found or expired.");

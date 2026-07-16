@@ -43,7 +43,7 @@ const fmt = (value: string | undefined | null) => {
   const d = new Date(value);
   return Number.isNaN(d.getTime())
     ? value
-    : d.toLocaleDateString("en-US", { dateStyle: "medium", timeStyle: "short" });
+    : d.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
 };
 
 const fmtDate = (value: string | undefined | null) => {
