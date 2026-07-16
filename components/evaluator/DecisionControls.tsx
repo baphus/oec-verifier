@@ -4,6 +4,7 @@ import { useState, useRef, useTransition, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
+  discardForEvaluator,
   rejectForEvaluator,
   revokeForEvaluator,
   verifyForEvaluator,
@@ -24,10 +25,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, XCircle, RotateCcw, Send, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, RotateCcw, Send, Loader2, Trash } from "lucide-react";
 import { StatusHelp } from "@/components/evaluator/StatusHelp";
 
-type Action = "verify" | "reject" | "revoke";
+type Action = "verify" | "reject" | "revoke" | "discard";
 
 export default function DecisionControls({
   id,
@@ -48,6 +49,8 @@ export default function DecisionControls({
       ? "Verify"
       : confirming === "reject"
       ? "Reject"
+      : confirming === "discard"
+      ? "Discard"
       : "Revoke receipt";
 
   // Keyboard shortcuts: V (verify), R (reject), Esc (cancel)
@@ -102,12 +105,14 @@ export default function DecisionControls({
             ? await verifyForEvaluator(id)
             : action === "reject"
             ? await rejectForEvaluator(id, reason)
+            : action === "discard"
+            ? await discardForEvaluator(id, reason)
             : await revokeForEvaluator(id, reason);
         if (!result.ok) {
           toast.error("The decision could not be saved.");
           setError(
             "error" in result
-              ? result.error
+              ? result.error ?? "The action could not be completed."
               : "The action could not be completed."
           );
           return;
@@ -117,6 +122,8 @@ export default function DecisionControls({
             ? "verified"
             : action === "reject"
             ? "rejected"
+            : action === "discard"
+            ? "discarded"
             : "revoked"
         );
         if ("emailWarning" in result && result.emailWarning)
@@ -129,6 +136,8 @@ export default function DecisionControls({
               ? "Submission verified."
               : action === "reject"
               ? "Submission rejected."
+              : action === "discard"
+              ? "Submission discarded."
               : "Receipt revoked."
           );
         router.refresh();
@@ -236,6 +245,20 @@ export default function DecisionControls({
                 )}
                 Reject
               </Button>
+              <Button
+                disabled={pending}
+                variant="outline"
+                onClick={() => setConfirming("discard")}
+                className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                size="sm"
+              >
+                {pending ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Trash className="h-4 w-4 mr-1.5" />
+                )}
+                {pending ? "Processing…" : "Discard"}
+              </Button>
             </div>
             <p className="text-xs text-muted-foreground">
               Press <span className="font-semibold text-foreground">V</span> to verify · <span className="font-semibold text-foreground">R</span> to reject
@@ -325,6 +348,8 @@ export default function DecisionControls({
                 ? "This will mark the submission as verified and issue the receipt."
                 : confirming === "reject"
                 ? "This will reject the submission using the recorded remarks."
+                : confirming === "discard"
+                ? "This will discard (soft-delete) the submission. It will be removed from the active queue but kept for audit. This cannot be undone from the UI."
                 : "This will revoke the verified receipt. The applicant will be notified."}
             </AlertDialogDescription>
           </AlertDialogHeader>

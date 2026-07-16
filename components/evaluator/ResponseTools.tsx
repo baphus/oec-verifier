@@ -93,7 +93,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { bulkRejectForEvaluator, bulkVerifyForEvaluator, resendForEvaluator, verifyForEvaluator, rejectForEvaluator } from "@/app/evaluator/actions";
+import { bulkRejectForEvaluator, bulkVerifyForEvaluator, resendForEvaluator, verifyForEvaluator, rejectForEvaluator, discardForEvaluator } from "@/app/evaluator/actions";
 import { getDecisionAuthors } from "@/lib/actions/evaluator";
 import { provincesByRegion } from "@/lib/data/philippines";
 
@@ -375,6 +375,7 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
   const [rejectTargetReason, setRejectTargetReason] = useState("");
+  const [discardTargetId, setDiscardTargetId] = useState<string | null>(null);
 
   // ── Hiding some columns by default on narrow screens ──
   // (columns are hidden via columnVisibility state)
@@ -570,7 +571,7 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
         const id = row.original.id;
         const isPendingRow = status === "pending";
         const isAcceptingThis = acceptingId === id;
-        const hasAnySingleAction = acceptingId !== null || rejectTargetId !== null;
+        const hasAnySingleAction = acceptingId !== null || rejectTargetId !== null || discardTargetId !== null;
         return (
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="xs" asChild>
@@ -606,6 +607,16 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
                 >
                   <XCircle className="size-3.5" />
                   <span className="hidden lg:inline">Reject</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  disabled={hasAnySingleAction}
+                  onClick={() => setDiscardTargetId(id)}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash className="size-3.5" />
+                  <span className="hidden lg:inline">Discard</span>
                 </Button>
               </>
             )}
@@ -797,6 +808,29 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
       } finally {
         setRejectTargetId(null);
         setRejectTargetReason("");
+      }
+    });
+  };
+
+  // ── Single-row Discard handler ──
+  const handleSingleDiscard = () => {
+    if (!discardTargetId) return;
+    const toastId = `discard-${discardTargetId}`;
+    toast.loading("Discarding submission…", { id: toastId });
+    const id = discardTargetId;
+    startTransition(async () => {
+      try {
+        const result = await discardForEvaluator(id, "");
+        if (!result.ok) {
+          toast.error("Could not discard this submission.", { id: toastId });
+        } else {
+          toast.success("Submission discarded.", { id: toastId });
+        }
+        router.refresh();
+      } catch {
+        toast.error("Could not discard this submission.", { id: toastId });
+      } finally {
+        setDiscardTargetId(null);
       }
     });
   };
@@ -1355,6 +1389,40 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
               variant="destructive"
             >
               {isPending ? "Rejecting…" : "Reject"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Single-row discard dialog ── */}
+      <AlertDialog
+        open={discardTargetId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDiscardTargetId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <div className="flex flex-col gap-2 max-sm:items-center sm:flex-row sm:gap-4">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border" aria-hidden="true">
+              <Trash className="opacity-80" size={16} strokeWidth={2} />
+            </div>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Discard this submission?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Discarding (soft-deleting) removes the submission from the active queue but keeps it for audit. This cannot be undone from the UI.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDiscardTargetId(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSingleDiscard}
+              disabled={isPending}
+              variant="destructive"
+            >
+              {isPending ? "Discarding…" : "Discard"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

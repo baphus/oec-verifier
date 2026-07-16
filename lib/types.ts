@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const submissionStatus = ["pending", "verified", "rejected", "revoked"] as const;
+export const submissionStatus = ["pending", "verified", "rejected", "revoked", "discarded"] as const;
 export type SubmissionStatus = (typeof submissionStatus)[number];
 export const profileRole = ["evaluator", "admin"] as const;
 export type ProfileRole = (typeof profileRole)[number];
