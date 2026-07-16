@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -88,6 +88,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { bulkRejectForEvaluator, bulkVerifyForEvaluator } from "@/app/evaluator/actions";
+import { getDecisionAuthors } from "@/lib/actions/evaluator";
 
 type Row = {
   id: string;
@@ -103,6 +104,7 @@ type Row = {
   status: string;
   decision_reason: string | null;
   decided_at: string | null;
+  decided_by: string | null;
   decided_by_name: string | null;
   created_at: string;
 };
@@ -157,6 +159,22 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     pageSize: 25,
   });
 
+  // ── Author name lookup (fetched fresh on mount to bust Router Cache) ──
+  const [authorNames, setAuthorNames] = useState<Record<string, string> | null>(null);
+  // Ref keeps the cell closure honest — memoized columns capture null without it
+  const authorNamesRef = useRef(authorNames);
+  authorNamesRef.current = authorNames;
+
+  useEffect(() => {
+    const ids = rows.map((r) => r.decided_by).filter(Boolean) as string[];
+    if (ids.length > 0) {
+      getDecisionAuthors(Array.from(new Set(ids))).then(setAuthorNames).catch(() => {});
+    } else {
+      setAuthorNames({});
+    }
+    // Intentionally only on mount — fresh fetch every client nav
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Export state ──
   const [fields, setFields] = useState([
@@ -328,11 +346,17 @@ export default function ResponseTools({ rows, exportMode = false }: ResponseTool
     {
       header: "Evaluated by",
       accessorKey: "decided_by_name",
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">
-          {row.getValue("decided_by_name") ?? "—"}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const freshName =
+          row.original.decided_by && authorNamesRef.current
+            ? (authorNamesRef.current[row.original.decided_by] ?? null)
+            : null;
+        return (
+          <span className="text-muted-foreground">
+            {freshName ?? row.original.decided_by_name ?? "—"}
+          </span>
+        );
+      },
       size: 140,
     },
     {

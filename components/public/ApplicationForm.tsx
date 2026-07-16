@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { submitPublicApplication } from "@/lib/actions/submissions";
 import { PRIVACY_CONSENT_VERSION } from "@/lib/types";
-import { regions, provinces } from "@/lib/data/philippines";
+import { regions, provincesByRegion } from "@/lib/data/philippines";
 import { jobsiteCountries } from "@/lib/data/countries";
 import { commonPositions } from "@/lib/data/positions";
 import { countryCodes } from "@/lib/data/country-codes";
@@ -48,6 +48,7 @@ export default function ApplicationForm() {
   const [formError, setFormError] = useState("");
   const [requestId, setRequestId] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [selectedRegion, setSelectedRegion] = useState("");
   const router = useRouter();
   useEffect(() => { const timer = window.setTimeout(() => setRequestId(newRequestId()), 0); return () => window.clearTimeout(timer); }, []);
 
@@ -81,7 +82,7 @@ export default function ApplicationForm() {
         if ("referenceNumber" in result && result.referenceNumber) {
           toast.dismiss(toastId);
           setRequestId(newRequestId());
-          router.push(result.emailWarning ? "/apply/success?emailWarning=1" : "/apply/success");
+          router.push("/apply/success");
         } else {
           toast.error("We could not submit your application.", { id: toastId });
           setFormError(result.error || "We could not submit your application. Please try again."); setErrors(result.fieldErrors || {});
@@ -109,12 +110,12 @@ export default function ApplicationForm() {
 
       <Field name="philippineAddress" label="COMPLETE ADDRESS (IN THE PHILIPPINES)" error={errors.philippineAddress} wide asTextarea placeholder="This is a required question" />
 
-      <SelectField name="province" label="PROVINCE" error={errors.province} options={[...provinces]} />
-      <SelectField name="region" label="REGION" error={errors.region} options={[...regions]} />
+      <SelectField name="region" label="REGION" error={errors.region} options={[...regions]} onValueChange={setSelectedRegion} />
+      <SelectField key={`province-${selectedRegion}`} name="province" label="PROVINCE" error={errors.province} options={selectedRegion ? [...(provincesByRegion[selectedRegion] ?? [])] : []} />
 
       <ComboBoxField name="position" label="POSITION (JOB POSITION IN OEC)" error={errors.position} options={[...commonPositions]} wide placeholder="This is a required question" />
 
-      <SelectField name="jobsite" label="JOBSITE (DESTINATION)" error={errors.jobsite} options={[...jobsiteCountries]} wide />
+      <JobsiteField error={errors.jobsite} />
 
       <PhoneField error={errors.contactNumber} />
 
@@ -144,10 +145,10 @@ function Field({ name, label, type = "text", autoComplete, error, wide, placehol
   </div>;
 }
 
-function SelectField({ name, label, options, error, wide }: { name: string; label: string; options: string[]; error?: string; wide?: boolean }) {
+function SelectField({ name, label, options, error, wide, onValueChange }: { name: string; label: string; options: string[]; error?: string; wide?: boolean; onValueChange?: (value: string) => void }) {
   return <div className={wide ? "field field-wide" : "field"}>
     <Label htmlFor={name}>{label}<span aria-hidden="true"> *</span></Label>
-    <Select name={name} defaultValue=""><SelectTrigger id={name} className="w-full" aria-invalid={!!error}><SelectValue placeholder="Select one" /></SelectTrigger><SelectContent>{options.map((option) => <SelectItem value={option} key={option}>{option}</SelectItem>)}</SelectContent></Select>
+    <Select name={name} defaultValue="" onValueChange={onValueChange}><SelectTrigger id={name} className="w-full" aria-invalid={!!error}><SelectValue placeholder={options.length ? "Select one" : "Select a region first"} /></SelectTrigger><SelectContent>{options.map((option) => <SelectItem value={option} key={option}>{option}</SelectItem>)}</SelectContent></Select>
     {error && <p className="field-error" id={`${name}-error`} role="alert">{error}</p>}
   </div>;
 }
@@ -192,6 +193,54 @@ function PhoneField({ error }: { error?: string }) {
     </div>
     <p className="field-hint" id={descId}>Philippine or foreign numbers are accepted</p>
     {error && <p className="field-error" id={errorId} role="alert">{error}</p>}
+  </div>;
+}
+
+/** Build a country-name → flag emoji lookup from countryCodes data. */
+function buildFlagLookup(): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const cc of countryCodes) {
+    // Exact match by the full name in country-codes
+    map[cc.name] = cc.flag;
+    // Also index by the primary name before " / " (e.g. "United States / Canada" → "United States")
+    const slashIdx = cc.name.indexOf(" / ");
+    if (slashIdx > 0) map[cc.name.slice(0, slashIdx)] = cc.flag;
+  }
+  // Manual overrides / additions for entries that don't align with country-codes naming
+  map["Worldwide"] = "🌐";
+  map["Czech Republic"] = "🇨🇿";
+  map["South Korea"] = "🇰🇷";
+  map["United Kingdom"] = "🇬🇧";
+  map["U.S. Virgin Islands"] = "🇻🇮";
+  map["Ethiopia"] = "🇪🇹";
+  map["Seychelles"] = "🇸🇨";
+  map["Mauritius"] = "🇲🇺";
+  map["Guam"] = "🇬🇺";
+  map["Northern Mariana Islands"] = "🇲🇵";
+  map["Cuba"] = "🇨🇺";
+  map["Venezuela"] = "🇻🇪";
+  return map;
+}
+
+const jobsiteFlags = buildFlagLookup();
+
+function JobsiteField({ error }: { error?: string }) {
+  const descId = "jobsite-desc";
+  return <div className="field field-wide">
+    <Label htmlFor="jobsite">JOBSITE (DESTINATION)<span aria-hidden="true"> *</span></Label>
+    <Select name="jobsite" defaultValue="">
+      <SelectTrigger id="jobsite" className="w-full" aria-invalid={!!error}>
+        <SelectValue placeholder="Select one" />
+      </SelectTrigger>
+      <SelectContent>
+        {jobsiteCountries.map((country) => (
+          <SelectItem value={country} key={country}>
+            <span className="phone-option">{jobsiteFlags[country] ?? ""} {country}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+    {error && <p className="field-error" id="jobsite-error" role="alert">{error}</p>}
   </div>;
 }
 

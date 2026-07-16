@@ -1,5 +1,6 @@
 /** Common OFW destination countries. Sorted by rough relevance. */
 export const jobsiteCountries = [
+  "Worldwide",
   "Saudi Arabia",
   "United Arab Emirates",
   "Kuwait",

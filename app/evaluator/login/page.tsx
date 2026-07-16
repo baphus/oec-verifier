@@ -13,40 +13,48 @@ export default async function EvaluatorLoginPage() {
 
   return (
     <div className="evaluator-auth">
-      {/* Left panel — visual / brand */}
+      {/* Left panel — brand / visual */}
       <div className="auth-visual" aria-hidden="true">
         <div className="auth-visual-content">
           <Image
             src="/dmw_logo.png"
             alt="Department of Migrant Workers"
-            width={56}
-            height={56}
+            width={72}
+            height={72}
             priority
             className="auth-logo"
           />
-          <h2 className="auth-headline">
-            Secure verification for Filipinos working abroad
-          </h2>
+          <Image
+            src="/bagong-pilipinas.png"
+            alt="Bagong Pilipinas"
+            width={108}
+            height={36}
+            className="auth-bp-logo"
+          />
+          <p className="auth-tagline">Secure verification for overseas<br />Filipino workers</p>
+          <div className="auth-gold-rule" />
+          <p className="auth-government">
+            Department of Migrant Workers<br />
+            Republic of the Philippines
+          </p>
         </div>
       </div>
 
-      {/* Right panel — sign-in form */}
+      {/* Right panel — sign-in */}
       <div className="auth-form-panel">
         <div className="auth-form-inner">
           <div className="auth-form-header">
             <Image
               src="/dmw_logo.png"
-              alt="Department of Migrant Workers"
-              width={40}
-              height={40}
+              alt=""
+              width={36}
+              height={36}
               priority
               className="auth-form-logo"
             />
             <div>
               <h1 className="auth-form-title">Evaluator sign in</h1>
-              <p className="auth-form-subtitle">
-                Sign in with your assigned evaluator account.
-              </p>
+              <p className="auth-form-subtitle">Use your assigned evaluator account.</p>
             </div>
           </div>
 

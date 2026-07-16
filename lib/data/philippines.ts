@@ -8,6 +8,7 @@ export const regions = [
   "MIMAROPA Region",
   "Region V — Bicol Region",
   "Region VI — Western Visayas",
+  "Negros Island Region",
   "Region VII — Central Visayas",
   "Region VIII — Eastern Visayas",
   "Region IX — Zamboanga Peninsula",
@@ -18,22 +19,25 @@ export const regions = [
   "BARMM — Bangsamoro Autonomous Region in Muslim Mindanao",
 ] as const;
 
-export const provinces = [
-  "Abra", "Agusan del Norte", "Agusan del Sur", "Aklan", "Albay", "Antique", "Apayao", "Aurora",
-  "Bataan", "Batanes", "Batangas", "Basilan", "Benguet", "Biliran", "Bohol", "Bukidnon", "Bulacan",
-  "Cagayan", "Camarines Norte", "Camarines Sur", "Camiguin", "Capiz", "Catanduanes", "Cavite", "Cebu", "Cotabato",
-  "Davao de Oro", "Davao del Norte", "Davao del Sur", "Davao Occidental", "Davao Oriental", "Dinagat Islands",
-  "Eastern Samar",
-  "Guimaras",
-  "Ifugao", "Ilocos Norte", "Ilocos Sur", "Iloilo", "Isabela",
-  "Kalinga",
-  "La Union", "Laguna", "Lanao del Norte", "Lanao del Sur", "Leyte",
-  "Maguindanao del Norte", "Maguindanao del Sur", "Marinduque", "Masbate", "Metro Manila", "Misamis Occidental", "Misamis Oriental", "Mountain Province",
-  "Negros Occidental", "Negros Oriental", "Northern Samar", "Nueva Ecija", "Nueva Vizcaya",
-  "Occidental Mindoro", "Oriental Mindoro",
-  "Palawan", "Pampanga", "Pangasinan", "Quezon", "Quirino",
-  "Rizal", "Romblon",
-  "Samar", "Sarangani", "Siquijor", "Sorsogon", "South Cotabato", "Southern Leyte", "Sultan Kudarat", "Sulu", "Surigao del Norte", "Surigao del Sur",
-  "Tarlac", "Tawi-Tawi",
-  "Zambales", "Zamboanga del Norte", "Zamboanga del Sur", "Zamboanga Sibugay",
-] as const;
+export const provincesByRegion: Record<string, readonly string[]> = {
+  "NCR — National Capital Region": ["Metro Manila"],
+  "CAR — Cordillera Administrative Region": ["Abra", "Apayao", "Benguet", "Ifugao", "Kalinga", "Mountain Province"],
+  "Region I — Ilocos Region": ["Ilocos Norte", "Ilocos Sur", "La Union", "Pangasinan"],
+  "Region II — Cagayan Valley": ["Batanes", "Cagayan", "Isabela", "Nueva Vizcaya", "Quirino"],
+  "Region III — Central Luzon": ["Aurora", "Bataan", "Bulacan", "Nueva Ecija", "Pampanga", "Tarlac", "Zambales"],
+  "Region IV-A — CALABARZON": ["Batangas", "Cavite", "Laguna", "Quezon", "Rizal"],
+  "MIMAROPA Region": ["Marinduque", "Occidental Mindoro", "Oriental Mindoro", "Palawan", "Romblon"],
+  "Region V — Bicol Region": ["Albay", "Camarines Norte", "Camarines Sur", "Catanduanes", "Masbate", "Sorsogon"],
+  "Region VI — Western Visayas": ["Aklan", "Antique", "Capiz", "Guimaras", "Iloilo"],
+  "Negros Island Region": ["Negros Occidental", "Negros Oriental", "Siquijor"],
+  "Region VII — Central Visayas": ["Bohol", "Cebu"],
+  "Region VIII — Eastern Visayas": ["Biliran", "Eastern Samar", "Leyte", "Northern Samar", "Samar", "Southern Leyte"],
+  "Region IX — Zamboanga Peninsula": ["Zamboanga del Norte", "Zamboanga del Sur", "Zamboanga Sibugay"],
+  "Region X — Northern Mindanao": ["Bukidnon", "Camiguin", "Lanao del Norte", "Misamis Occidental", "Misamis Oriental"],
+  "Region XI — Davao Region": ["Davao de Oro", "Davao del Norte", "Davao del Sur", "Davao Occidental", "Davao Oriental"],
+  "Region XII — SOCCSKSARGEN": ["Cotabato", "Sarangani", "South Cotabato", "Sultan Kudarat"],
+  "Caraga Region": ["Agusan del Norte", "Agusan del Sur", "Dinagat Islands", "Surigao del Norte", "Surigao del Sur"],
+  "BARMM — Bangsamoro Autonomous Region in Muslim Mindanao": ["Basilan", "Lanao del Sur", "Maguindanao del Norte", "Maguindanao del Sur", "Sulu", "Tawi-Tawi"],
+} as const;
+
+export const provinces = Object.values(provincesByRegion).flat();

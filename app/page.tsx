@@ -18,11 +18,16 @@ export default function Home() {
               <Link className="text-link" href="/apply">Need to start an application?</Link>
             </div>
           </div>
-          <div className="route-card" aria-label="Application process">
-            <div className="route-card-top"><span>YOUR ROUTE</span><span aria-hidden="true">OEC / 01</span></div>
-            <div className="route-line"><span className="route-dot" /><span className="route-track" /><span className="route-dot route-dot-end" /></div>
-            <div className="route-stops"><span>APPLICATION</span><span>REVIEW</span></div>
-            <p>Keep your reference number handy. It is the fastest way to check your receipt and application status.</p>
+          <div className="hero-image" aria-hidden="true">
+            <Image
+              src="/hero-phone-mockup.png"
+              alt=""
+              width={320}
+              height={640}
+              priority
+              sizes="(max-width: 767px) 240px, 320px"
+              className="hero-image-img"
+            />
           </div>
         </section>
 
@@ -34,17 +39,6 @@ export default function Home() {
         </section>
       </main>
       <PublicFooter />
-      <section className="hero-visual" aria-hidden="true">
-        <Image
-          src="/footer.jpg"
-          alt=""
-          width={1200}
-          height={400}
-          priority
-          className="w-full object-cover"
-          style={{ maxHeight: "360px" }}
-        />
-      </section>
     </div>
   );
 }
