@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 type Errors = Record<string, string>;
-const required = ["email", "lastName", "firstName", "middleName", "gender", "category", "philippineAddress", "province", "region", "position", "jobsite", "contactNumber", "oecNumber"];
+const required = ["email", "lastName", "firstName", "middleName", "gender", "category", "addressLine1", "barangay", "municipality", "postalCode", "province", "region", "position", "jobsite", "contactNumber", "oecNumber"];
 const labels: Record<string, string> = {
   email: "Email",
   lastName: "SURNAME (LAST NAME)",
@@ -26,7 +26,11 @@ const labels: Record<string, string> = {
   middleName: "MIDDLE NAME",
   gender: "GENDER",
   category: "CATEGORY",
-  philippineAddress: "COMPLETE ADDRESS (IN THE PHILIPPINES)",
+  addressLine1: "HOUSE / BUILDING / STREET / SITIO / PUROK",
+  addressLine2: "ADDRESS LINE 2",
+  barangay: "BARANGAY",
+  municipality: "CITY / MUNICIPALITY",
+  postalCode: "POSTAL CODE",
   province: "PROVINCE",
   region: "REGION",
   position: "POSITION (JOB POSITION IN OEC)",
@@ -57,6 +61,7 @@ export default function ApplicationForm() {
     required.forEach((name) => { if (!String(data.get(name) || "").trim()) next[name] = `${labels[name].replace("\n", " ")} is required.`; });
     if (data.get("email") && !/^\S+@\S+\.\S+$/.test(String(data.get("email")))) next.email = "Enter a valid email address.";
     if (data.get("oecNumber") && !/^[A-Za-z0-9][A-Za-z0-9\- /]{2,49}$/.test(String(data.get("oecNumber")))) next.oecNumber = "Enter a valid OEC number.";
+    if (data.get("postalCode") && !/^\d{4}$/.test(String(data.get("postalCode")))) next.postalCode = "Enter a 4-digit Philippine postal code.";
     if (!data.get("consent")) next.consent = "Consent is required to submit your application.";
     return next;
   }
@@ -67,6 +72,8 @@ export default function ApplicationForm() {
     data.set("requestId", requestId);
     const fullName = [data.get("firstName"), data.get("middleName"), data.get("lastName")].map(String).map((value) => value.trim()).filter(Boolean).join(" ");
     data.set("fullName", fullName);
+    const philippineAddress = [data.get("addressLine1"), data.get("addressLine2"), `Barangay ${String(data.get("barangay") || "").trim()}`, data.get("municipality"), data.get("province"), data.get("region"), data.get("postalCode"), "Philippines"].map(String).map((value) => value.trim()).filter(Boolean).join(", ");
+    data.set("philippineAddress", philippineAddress);
     // Concatenate country code + phone number into contactNumber
     const dialCode = countryCodes.find((c) => c.code === data.get("contactDialCode"))?.dial ?? "+63";
     const number = String(data.get("contactNumber") || "").trim();
@@ -108,10 +115,19 @@ export default function ApplicationForm() {
 
       <SelectField name="category" label="CATEGORY" error={errors.category} options={[...categoryOptions]} wide />
 
-      <Field name="philippineAddress" label="COMPLETE ADDRESS (IN THE PHILIPPINES)" error={errors.philippineAddress} wide asTextarea placeholder="This is a required question" />
-
-      <SelectField name="region" label="REGION" error={errors.region} options={[...regions]} onValueChange={setSelectedRegion} />
-      <SelectField key={`province-${selectedRegion}`} name="province" label="PROVINCE" error={errors.province} options={selectedRegion ? [...(provincesByRegion[selectedRegion] ?? [])] : []} />
+      <fieldset className="field field-wide" aria-describedby="address-description">
+        <legend>PHILIPPINE RESIDENTIAL ADDRESS<span aria-hidden="true"> *</span></legend>
+        <p className="field-hint" id="address-description">Enter the address as it appears on your supporting document. All fields except Address line 2 are required.</p>
+        <div className="form-grid address-grid">
+          <Field name="addressLine1" label="HOUSE / BUILDING / STREET / SITIO / PUROK" error={errors.addressLine1} wide placeholder="e.g., 12 Rizal Street, Purok 3" />
+          <Field name="addressLine2" label="ADDRESS LINE 2 (OPTIONAL)" error={errors.addressLine2} wide placeholder="e.g., Unit, floor, subdivision" />
+          <Field name="barangay" label="BARANGAY" error={errors.barangay} placeholder="e.g., San Isidro" />
+          <Field name="municipality" label="CITY / MUNICIPALITY" error={errors.municipality} placeholder="e.g., Quezon City" autoComplete="address-level2" />
+          <SelectField name="region" label="REGION" error={errors.region} options={[...regions]} onValueChange={setSelectedRegion} />
+          <SelectField key={`province-${selectedRegion}`} name="province" label="PROVINCE" error={errors.province} options={selectedRegion ? [...(provincesByRegion[selectedRegion] ?? [])] : []} />
+          <Field name="postalCode" label="POSTAL CODE" error={errors.postalCode} inputMode="numeric" pattern="[0-9]{4}" maxLength={4} placeholder="e.g., 1100" />
+        </div>
+      </fieldset>
 
       <ComboBoxField name="position" label="POSITION (JOB POSITION IN OEC)" error={errors.position} options={[...commonPositions]} wide placeholder="This is a required question" />
 
@@ -128,8 +144,8 @@ export default function ApplicationForm() {
   </form>;
 }
 
-function Field({ name, label, type = "text", autoComplete, error, wide, placeholder, description, asTextarea }: {
-  name: string; label: string; type?: string; autoComplete?: string; error?: string; wide?: boolean; placeholder?: string; description?: string; asTextarea?: boolean;
+function Field({ name, label, type = "text", autoComplete, error, wide, placeholder, description, asTextarea, inputMode, pattern, maxLength }: {
+  name: string; label: string; type?: string; autoComplete?: string; error?: string; wide?: boolean; placeholder?: string; description?: string; asTextarea?: boolean; inputMode?: "numeric"; pattern?: string; maxLength?: number;
 }) {
   const inputId = name;
   const descId = description ? `${name}-desc` : undefined;
@@ -139,7 +155,7 @@ function Field({ name, label, type = "text", autoComplete, error, wide, placehol
     <Label htmlFor={inputId}>{label}<span aria-hidden="true"> *</span></Label>
     {asTextarea
       ? <Textarea id={inputId} name={name} rows={3} maxLength={300} aria-invalid={!!error} aria-describedby={describedBy} placeholder={placeholder} />
-      : <Input id={inputId} name={name} type={type} autoComplete={autoComplete} aria-invalid={!!error} aria-describedby={describedBy} placeholder={placeholder} />}
+      : <Input id={inputId} name={name} type={type} autoComplete={autoComplete} inputMode={inputMode} pattern={pattern} maxLength={maxLength} aria-invalid={!!error} aria-describedby={describedBy} placeholder={placeholder} />}
     {description && <p className="field-hint" id={descId}>{description}</p>}
     {error && <p className="field-error" id={errorId} role="alert">{error}</p>}
   </div>;
