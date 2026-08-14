@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 type Errors = Record<string, string>;
+type AddressHierarchy = Record<string, Record<string, string[]>>;
 const required = ["email", "lastName", "firstName", "middleName", "gender", "category", "addressLine1", "barangay", "municipality", "postalCode", "province", "region", "position", "jobsite", "contactNumber", "oecNumber"];
 const labels: Record<string, string> = {
   email: "Email",
@@ -46,6 +47,7 @@ const categoryOptions = [
 ] as const;
 
 function newRequestId() { return globalThis.crypto?.randomUUID?.() ?? ""; }
+function psgcFileName(region: string) { return region.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/^-+|-+$/g, ""); }
 
 export default function ApplicationForm() {
   const [errors, setErrors] = useState<Errors>({});
@@ -53,8 +55,26 @@ export default function ApplicationForm() {
   const [requestId, setRequestId] = useState("");
   const [isPending, startTransition] = useTransition();
   const [selectedRegion, setSelectedRegion] = useState("");
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedMunicipality, setSelectedMunicipality] = useState("");
+  const [addressHierarchy, setAddressHierarchy] = useState<AddressHierarchy | null>(null);
+  const [addressLoadError, setAddressLoadError] = useState("");
+  const addressLoading = !!selectedRegion && !addressHierarchy && !addressLoadError;
   const router = useRouter();
   useEffect(() => { const timer = window.setTimeout(() => setRequestId(newRequestId()), 0); return () => window.clearTimeout(timer); }, []);
+  useEffect(() => {
+    if (!selectedRegion) return;
+    const controller = new AbortController();
+    fetch(`/psgc/${psgcFileName(selectedRegion)}.json`, { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Could not load the locality list.")))
+      .then((data: AddressHierarchy) => setAddressHierarchy(data))
+      .catch((error: unknown) => { if ((error as { name?: string }).name !== "AbortError") setAddressLoadError("We could not load localities. Please reload and try again."); })
+    return () => controller.abort();
+  }, [selectedRegion]);
+
+  function handleRegionChange(value: string) {
+    setSelectedRegion(value); setSelectedProvince(""); setSelectedMunicipality(""); setAddressHierarchy(null); setAddressLoadError("");
+  }
 
   function validate(data: FormData) {
     const next: Errors = {};
@@ -62,6 +82,10 @@ export default function ApplicationForm() {
     if (data.get("email") && !/^\S+@\S+\.\S+$/.test(String(data.get("email")))) next.email = "Enter a valid email address.";
     if (data.get("oecNumber") && !/^[A-Za-z0-9][A-Za-z0-9\- /]{2,49}$/.test(String(data.get("oecNumber")))) next.oecNumber = "Enter a valid OEC number.";
     if (data.get("postalCode") && !/^\d{4}$/.test(String(data.get("postalCode")))) next.postalCode = "Enter a 4-digit Philippine postal code.";
+    const municipalityOptions = selectedProvince ? Object.keys(addressHierarchy?.[selectedProvince] ?? {}) : [];
+    const barangayOptions = municipalityOptions.includes(String(data.get("municipality"))) ? addressHierarchy?.[selectedProvince]?.[String(data.get("municipality"))] ?? [] : [];
+    if (municipalityOptions.length && !municipalityOptions.includes(String(data.get("municipality")))) next.municipality = "Choose a city, municipality, or district from the list.";
+    if (barangayOptions.length && !barangayOptions.includes(String(data.get("barangay")))) next.barangay = "Choose a barangay from the list.";
     if (!data.get("consent")) next.consent = "Consent is required to submit your application.";
     return next;
   }
@@ -121,10 +145,10 @@ export default function ApplicationForm() {
         <div className="form-grid address-grid">
           <Field name="addressLine1" label="HOUSE / BUILDING / STREET / SITIO / PUROK" error={errors.addressLine1} wide placeholder="e.g., 12 Rizal Street, Purok 3" />
           <Field name="addressLine2" label="ADDRESS LINE 2 (OPTIONAL)" error={errors.addressLine2} wide placeholder="e.g., Unit, floor, subdivision" />
-          <Field name="barangay" label="BARANGAY" error={errors.barangay} placeholder="e.g., San Isidro" />
-          <Field name="municipality" label="CITY / MUNICIPALITY" error={errors.municipality} placeholder="e.g., Quezon City" autoComplete="address-level2" />
-          <SelectField name="region" label="REGION" error={errors.region} options={[...regions]} onValueChange={setSelectedRegion} />
-          <SelectField key={`province-${selectedRegion}`} name="province" label="PROVINCE" error={errors.province} options={selectedRegion ? [...(provincesByRegion[selectedRegion] ?? [])] : []} />
+          <SelectField name="region" label="REGION" error={errors.region} options={[...regions]} onValueChange={handleRegionChange} />
+          <SelectField key={`province-${selectedRegion}`} name="province" label="PROVINCE / INDEPENDENT CITY" error={errors.province} options={selectedRegion ? [...(provincesByRegion[selectedRegion] ?? [])] : []} onValueChange={(value) => { setSelectedProvince(value); setSelectedMunicipality(""); }} />
+          <SmartSelectField key={`municipality-${selectedRegion}-${selectedProvince}`} name="municipality" label="CITY / MUNICIPALITY / DISTRICT" error={errors.municipality} options={selectedProvince ? Object.keys(addressHierarchy?.[selectedProvince] ?? {}) : []} onValueChange={setSelectedMunicipality} disabled={!selectedProvince || addressLoading || !!addressLoadError} placeholder={addressLoading ? "Loading localities…" : addressLoadError || (selectedProvince ? "Search or choose one" : "Select a province or city first")} />
+          <SmartSelectField key={`barangay-${selectedRegion}-${selectedProvince}-${selectedMunicipality}`} name="barangay" label="BARANGAY" error={errors.barangay} options={selectedMunicipality ? addressHierarchy?.[selectedProvince]?.[selectedMunicipality] ?? [] : []} disabled={!selectedMunicipality || addressLoading || !!addressLoadError} placeholder={addressLoading ? "Loading barangays…" : addressLoadError || "Select a city or municipality first"} />
           <Field name="postalCode" label="POSTAL CODE" error={errors.postalCode} inputMode="numeric" pattern="[0-9]{4}" maxLength={4} placeholder="e.g., 1100" />
         </div>
       </fieldset>
@@ -166,6 +190,20 @@ function SelectField({ name, label, options, error, wide, onValueChange }: { nam
     <Label htmlFor={name}>{label}<span aria-hidden="true"> *</span></Label>
     <Select name={name} defaultValue="" onValueChange={onValueChange}><SelectTrigger id={name} className="w-full" aria-invalid={!!error}><SelectValue placeholder={options.length ? "Select one" : "Select a region first"} /></SelectTrigger><SelectContent>{options.map((option) => <SelectItem value={option} key={option}>{option}</SelectItem>)}</SelectContent></Select>
     {error && <p className="field-error" id={`${name}-error`} role="alert">{error}</p>}
+  </div>;
+}
+
+function SmartSelectField({ name, label, options, error, disabled, placeholder, onValueChange }: {
+  name: string; label: string; options: string[]; error?: string; disabled?: boolean; placeholder: string; onValueChange?: (value: string) => void;
+}) {
+  const listId = `${name}-options`;
+  const errorId = error ? `${name}-error` : undefined;
+  return <div className="field">
+    <Label htmlFor={name}>{label}<span aria-hidden="true"> *</span></Label>
+    <Input id={name} name={name} list={listId} disabled={disabled} placeholder={placeholder} autoComplete="off" aria-invalid={!!error} aria-describedby={errorId} onChange={(event) => onValueChange?.(event.target.value)} />
+    <datalist id={listId}>{options.map((option) => <option value={option} key={option} />)}</datalist>
+    {!disabled && options.length > 0 && <p className="field-hint">Type to search, then choose a listed option.</p>}
+    {error && <p className="field-error" id={errorId} role="alert">{error}</p>}
   </div>;
 }
 
